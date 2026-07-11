@@ -1,0 +1,347 @@
+.briefing {
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+  background: #0a0e1a;
+  color: #e0e6f0;
+}
+
+.briefing-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: #0d1220;
+  border-bottom: 1px solid #1e2d45;
+}
+
+.briefing-fn {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #7eb8f7;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.1em;
+  display: block;
+}
+
+.briefing-route {
+  font-size: 0.75rem;
+  color: #4b5563;
+}
+
+.briefing-seat {
+  font-size: 0.8rem;
+  color: #6b7a99;
+}
+
+/* Loading state */
+.briefing-loading {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  gap: 16px;
+}
+
+.briefing-progress-bar {
+  width: 100%;
+  max-width: 320px;
+  height: 4px;
+  background: #1e2d45;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.briefing-progress-fill {
+  height: 100%;
+  background: #7eb8f7;
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+.briefing-loading-msg {
+  font-size: 0.9rem;
+  color: #7eb8f7;
+  font-family: 'Courier New', monospace;
+  margin: 0;
+  text-align: center;
+}
+
+.briefing-loading-sub {
+  font-size: 0.75rem;
+  color: #374151;
+  margin: 0;
+}
+
+/* Briefing content */
+.briefing-content {
+  flex: 1;
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+}
+
+.briefing-title {
+  font-size: 1.1rem;
+  color: #7eb8f7;
+  margin: 0 0 4px;
+  font-weight: 500;
+}
+
+.briefing-card {
+  background: #0d1220;
+  border: 1px solid #1e2d45;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.briefing-card-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #4b5563;
+  margin-bottom: 8px;
+}
+
+.briefing-card-text {
+  font-size: 0.88rem;
+  color: #d1d5db;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.briefing-smooth {
+  color: #6ee7b7 !important;
+}
+
+/* Turbulence zones */
+.briefing-turb {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 6px 0;
+  border-bottom: 1px solid #1e2d45;
+  font-size: 0.85rem;
+}
+
+.briefing-turb:last-child { border-bottom: none; }
+
+.briefing-turb-zone { color: #e0e6f0; }
+
+.briefing-turb-intensity { font-size: 0.78rem; }
+.briefing-turb-light    .briefing-turb-intensity { color: #fbbf24; }
+.briefing-turb-moderate .briefing-turb-intensity { color: #f97316; }
+.briefing-turb-severe   .briefing-turb-intensity { color: #ef4444; }
+
+.briefing-turb-count { color: #4b5563; }
+
+/* Highlights */
+.briefing-highlight {
+  padding: 8px 0;
+  border-bottom: 1px solid #1e2d45;
+}
+
+.briefing-highlight:last-child { border-bottom: none; }
+
+.briefing-highlight-name {
+  font-size: 0.85rem;
+  color: #7eb8f7;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.briefing-highlight-hook {
+  font-size: 0.82rem;
+  color: #9ca3af;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Start button */
+.briefing-start-btn {
+  margin-top: auto;
+  padding: 16px;
+  background: #1a3a6b;
+  border: 1px solid #7eb8f7;
+  border-radius: 8px;
+  color: #7eb8f7;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.05em;
+}
+
+.briefing-start-btn:hover { background: #1e4a8a; }
+
+.briefing-spinner {
+  font-size: 2rem;
+  animation: fly 4s ease-in-out infinite;
+}
+
+@keyframes fly {
+  0%   { transform: translateX(-150px); opacity: 0; }
+  10%  { opacity: 1; }
+  50%  { transform: translateX(150px); opacity: 1; }
+  50.1%{ transform: translateX(150px) scaleX(-1); opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateX(-150px) scaleX(-1); opacity: 0; }
+}
+
+/* Destination weather card */
+.briefing-dest-low      { border-color: #6ee7b7 !important; }
+.briefing-dest-moderate { border-color: #fbbf24 !important; }
+.briefing-dest-high     { border-color: #f97316 !important; }
+
+/* ── Anxiety profile capture ─────────────────────────────────────── */
+.anxiety-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px;
+  gap: 28px;
+  overflow-y: auto;
+}
+
+.anxiety-intro {
+  text-align: center;
+  padding: 8px 0 4px;
+}
+
+.anxiety-intro-icon {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.anxiety-intro-title {
+  font-size: 1.05rem;
+  color: #e0e6f0;
+  margin: 0 0 8px;
+  font-weight: 500;
+}
+
+.anxiety-intro-sub {
+  font-size: 0.82rem;
+  color: #6b7a99;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.anxiety-question {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.anxiety-question-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #4b5563;
+}
+
+.anxiety-question-text {
+  font-size: 0.92rem;
+  color: #d1d5db;
+  margin: 0 0 4px;
+  line-height: 1.5;
+}
+
+.anxiety-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.anxiety-opt {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #0d1220;
+  border: 1px solid #1e2d45;
+  border-radius: 8px;
+  color: #d1d5db;
+  font-size: 0.88rem;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+  line-height: 1.4;
+}
+
+.anxiety-opt:hover {
+  border-color: #2e4a6b;
+  background: #111827;
+}
+
+.anxiety-opt--selected {
+  border-color: #7eb8f7;
+  background: #0f1e35;
+  color: #e0e6f0;
+}
+
+.anxiety-opt-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
+.anxiety-opt-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.anxiety-opt-label {
+  font-weight: 500;
+}
+
+.anxiety-opt-sub {
+  font-size: 0.75rem;
+  color: #6b7a99;
+}
+
+.anxiety-opt--selected .anxiety-opt-sub {
+  color: #4b7ab7;
+}
+
+.anxiety-continue-btn {
+  margin-top: auto;
+  padding: 16px;
+  background: #1a3a6b;
+  border: 1px solid #7eb8f7;
+  border-radius: 8px;
+  color: #7eb8f7;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.05em;
+}
+
+.anxiety-continue-btn:hover:not(:disabled) { background: #1e4a8a; }
+.anxiety-continue-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.anxiety-skip {
+  text-align: center;
+  padding-bottom: 8px;
+}
+
+.anxiety-skip-btn {
+  background: none;
+  border: none;
+  color: #374151;
+  font-size: 0.78rem;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 4px 8px;
+}
+
+.anxiety-skip-btn:hover { color: #6b7a99; }

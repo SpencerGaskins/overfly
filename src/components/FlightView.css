@@ -1,0 +1,534 @@
+.flight-view {
+  display: flex;
+  flex-direction: column;
+  height: 100svh;
+  background: #0a0e1a;
+  color: #e0e6f0;
+  position: relative;
+}
+
+/* Header */
+.fv-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #0d1220;
+  border-bottom: 1px solid #1e2d45;
+  z-index: 1000;
+  flex-shrink: 0;
+}
+
+.fv-flight {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fv-fn {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #7eb8f7;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.1em;
+}
+
+.fv-route {
+  font-size: 0.75rem;
+  color: #4b5563;
+}
+
+.fv-stats {
+  display: flex;
+  gap: 16px;
+  font-size: 0.8rem;
+  color: #6b7a99;
+  font-family: 'Courier New', monospace;
+}
+
+.fv-exit {
+  background: transparent;
+  border: none;
+  color: #4b5563;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.fv-exit:hover { color: #e0e6f0; }
+
+/* Map */
+.fv-map {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+
+.fv-map .leaflet-container {
+  background: #0a0e1a;
+}
+
+/* Leaflet popup override */
+.wp-popup .leaflet-popup-content-wrapper {
+  background: #111827;
+  border: 1px solid #1e2d45;
+  color: #e0e6f0;
+  border-radius: 8px;
+  max-width: 260px;
+}
+
+.wp-popup .leaflet-popup-tip {
+  background: #111827;
+}
+
+.wp-popup strong {
+  color: #7eb8f7;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.wp-popup p {
+  font-size: 0.82rem;
+  color: #9ca3af;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Simulation controls */
+.fv-controls {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #0d1220;
+  border-top: 1px solid #1e2d45;
+  flex-shrink: 0;
+}
+
+.sim-btn {
+  flex: 1;
+  padding: 8px;
+  background: #111827;
+  border: 1px solid #1e2d45;
+  border-radius: 6px;
+  color: #6b7a99;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sim-btn:hover {
+  border-color: #7eb8f7;
+  color: #7eb8f7;
+}
+
+/* Waypoint card */
+.wp-card {
+  position: absolute;
+  bottom: 70px;
+  left: 12px;
+  right: 12px;
+  background: #0d1220ee;
+  border: 1px solid #1e3a6b;
+  border-radius: 12px;
+  padding: 16px;
+  z-index: 1000;
+  backdrop-filter: blur(8px);
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.wp-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.wp-card-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #7eb8f7;
+  line-height: 1.3;
+  flex: 1;
+  padding-right: 8px;
+}
+
+.wp-card-close {
+  background: transparent;
+  border: none;
+  color: #4b5563;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.wp-card-hook {
+  font-size: 0.88rem;
+  color: #d1d5db;
+  line-height: 1.6;
+  margin: 0 0 14px;
+}
+
+.wp-paths-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #4b5563;
+  margin: 0 0 8px;
+}
+
+.wp-card-paths {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wp-path-btn {
+  background: #111827;
+  border: 1px solid #1e2d45;
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: #9ca3af;
+  font-size: 0.82rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+  line-height: 1.4;
+}
+
+.wp-path-btn:hover {
+  border-color: #7eb8f7;
+  color: #e0e6f0;
+}
+
+/* Prefetch progress bar */
+.prefetch-bar {
+  position: relative;
+  height: 36px;
+  background: #0d1220;
+  border-bottom: 1px solid #1e2d45;
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.prefetch-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #0f2744, #1a3a6b);
+  transition: width 0.3s;
+  z-index: 0;
+}
+
+.prefetch-label {
+  position: relative;
+  z-index: 1;
+  font-size: 0.78rem;
+  color: #7eb8f7;
+  white-space: nowrap;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.05em;
+}
+
+/* Queue indicator */
+.fv-queue {
+  color: #fbbf24;
+  font-size: 0.72rem;
+}
+
+/* Wikipedia card variant */
+.wp-card-source {
+  display: inline-block;
+  font-size: 0.68rem;
+  color: #a78bfa;
+  margin-left: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.wp-card-wiki {
+  color: #a78bfa !important;
+  font-style: italic;
+}
+
+.wp-queue-hint {
+  font-size: 0.72rem;
+  color: #4b5563;
+  margin: 8px 0 0;
+  text-align: right;
+}
+
+.wp-ask-btn {
+  background: #0f2744;
+  border-color: #7eb8f7 !important;
+  color: #7eb8f7 !important;
+  font-size: 0.9rem !important;
+  padding: 10px 14px !important;
+  margin-top: 4px;
+}
+
+.wp-wiki-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Turbulence alert — safety tier, top of screen */
+.turb-alert {
+  position: absolute;
+  top: 56px;  /* below header */
+  left: 12px;
+  right: 12px;
+  border-radius: 10px;
+  padding: 12px 14px;
+  z-index: 1001;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  backdrop-filter: blur(8px);
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-20px); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+
+.turb-alert-light {
+  background: #1a1a00ee;
+  border: 1px solid #fbbf24;
+}
+
+.turb-alert-moderate {
+  background: #1a0d00ee;
+  border: 1px solid #f97316;
+}
+
+.turb-alert-severe {
+  background: #1a0000ee;
+  border: 2px solid #ef4444;
+}
+
+.turb-alert-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.turb-alert-text {
+  flex: 1;
+}
+
+.turb-alert-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #fbbf24;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.turb-alert-moderate .turb-alert-label { color: #f97316; }
+.turb-alert-severe   .turb-alert-label { color: #ef4444; }
+
+.turb-alert-hook {
+  font-size: 0.82rem;
+  color: #d1d5db;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.turb-alert-close {
+  background: transparent;
+  border: none;
+  color: #6b7a99;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+/* ── FLYREP ──────────────────────────────────────────────────── */
+
+.flyrep-btn {
+  border-color: #2a3a55 !important;
+  color: #a78bfa !important;
+  flex: 1.2;
+}
+
+.flyrep-btn--active,
+.flyrep-btn:hover {
+  border-color: #a78bfa !important;
+  background: #1a1030 !important;
+}
+
+/* Intensity picker — slides up from controls bar */
+.flyrep-picker {
+  position: absolute;
+  bottom: 56px; /* sits just above controls bar */
+  left: 12px;
+  right: 12px;
+  background: #0d1220f0;
+  border: 1px solid #2a1a5e;
+  border-radius: 12px;
+  padding: 16px;
+  z-index: 1002;
+  backdrop-filter: blur(10px);
+  animation: slideUp 0.2s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.flyrep-picker-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7a99;
+  margin: 0 0 12px;
+}
+
+.flyrep-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.flyrep-opt {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: #111827;
+  color: #d1d5db;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+
+.flyrep-opt-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.flyrep-lgt { border-color: #374151; }
+.flyrep-mod { border-color: #374151; }
+.flyrep-sev { border-color: #374151; }
+
+.flyrep-lgt:hover { border-color: #fbbf24; background: #1a1500; color: #fbbf24; }
+.flyrep-mod:hover { border-color: #f97316; background: #1a0d00; color: #f97316; }
+.flyrep-sev:hover { border-color: #ef4444; background: #1a0000; color: #ef4444; }
+
+.flyrep-cancel {
+  width: 100%;
+  padding: 8px;
+  background: transparent;
+  border: 1px solid #1e2d45;
+  border-radius: 6px;
+  color: #4b5563;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.flyrep-cancel:hover { color: #9ca3af; }
+
+/* Submission toast */
+.flyrep-toast {
+  position: absolute;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.04em;
+  z-index: 1003;
+  white-space: nowrap;
+  animation: fadeInOut 2.5s ease forwards;
+  pointer-events: none;
+}
+
+.flyrep-toast--submitting {
+  background: #0d1220;
+  border: 1px solid #2a3a55;
+  color: #6b7a99;
+}
+
+.flyrep-toast--ok {
+  background: #0a1f0a;
+  border: 1px solid #22c55e;
+  color: #86efac;
+}
+
+.flyrep-toast--err {
+  background: #1a0000;
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+}
+
+@keyframes fadeInOut {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  15%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  75%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ── Live tracking ───────────────────────────────────────────── */
+
+.live-btn {
+  color: #34d399 !important;
+  border-color: #064e3b !important;
+}
+
+.live-btn--active {
+  background: #022c22 !important;
+  border-color: #34d399 !important;
+  animation: livePulse 2s infinite;
+}
+
+@keyframes livePulse {
+  0%, 100% { border-color: #34d399; }
+  50%       { border-color: #6ee7b7; }
+}
+
+.live-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 16px;
+  background: #022c22;
+  border-bottom: 1px solid #064e3b;
+  font-size: 0.75rem;
+  font-family: 'Courier New', monospace;
+  color: #34d399;
+  flex-shrink: 0;
+}
+
+.live-status--stale {
+  background: #1a1a00;
+  border-color: #fbbf24;
+  color: #fbbf24;
+}
+
+.live-dot {
+  font-size: 0.6rem;
+  animation: livePulse 1.5s infinite;
+}
+
+.live-stale-label {
+  color: #fbbf24;
+}

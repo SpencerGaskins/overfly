@@ -1,0 +1,95 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: FlightLevel — Route Bundler Lambda + EventBridge cron
+
+Parameters:
+  SupabaseUrl:
+    Type: String
+    Description: Supabase project URL
+    NoEcho: false
+  SupabaseServiceKey:
+    Type: String
+    Description: Supabase service role key (server-side only)
+    NoEcho: true
+  S3Bucket:
+    Type: String
+    Default: flightlevel-routes
+    Description: S3 bucket for route bundles
+
+Resources:
+
+  # ── IAM Role ──────────────────────────────────────────────────────
+  RouteBundlerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: flightlevel-route-bundler-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: S3WriteRoutes
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                Resource: !Sub 'arn:aws:s3:::${S3Bucket}/routes/*'
+
+  # ── Lambda Function ───────────────────────────────────────────────
+  RouteBundlerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: flightlevel-route-bundler
+      Runtime: nodejs20.x
+      Handler: index.handler
+      Role: !GetAtt RouteBundlerRole.Arn
+      Timeout: 300        # 5 minutes — Wikipedia enrichment takes time
+      MemorySize: 512
+      Environment:
+        Variables:
+          SUPABASE_URL:         !Ref SupabaseUrl
+          SUPABASE_SERVICE_KEY: !Ref SupabaseServiceKey
+          S3_BUCKET:            !Ref S3Bucket
+          S3_REGION:            us-east-2
+          NETLIFY_WIKI_URL:     https://flightlevel-app.netlify.app/.netlify/functions/wikipedia
+          AWS_REGION_OVERRIDE:  !Ref AWS::Region
+      # Code uploaded separately via aws lambda update-function-code
+      Code:
+        ZipFile: |
+          export const handler = async () => ({ statusCode: 200, body: 'placeholder' })
+
+  # ── EventBridge Scheduler — 04:00 UTC daily ───────────────────────
+  BundlerSchedule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: flightlevel-nightly-bundler
+      Description: Trigger route bundle assembly at 04:00 UTC daily
+      ScheduleExpression: 'cron(0 4 * * ? *)'
+      State: ENABLED
+      Targets:
+        - Id: RouteBundlerTarget
+          Arn: !GetAtt RouteBundlerFunction.Arn
+
+  # Permission for EventBridge to invoke Lambda
+  BundlerSchedulePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref RouteBundlerFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt BundlerSchedule.Arn
+
+Outputs:
+  LambdaArn:
+    Value: !GetAtt RouteBundlerFunction.Arn
+    Description: Route bundler Lambda ARN
+  LambdaRoleArn:
+    Value: !GetAtt RouteBundlerRole.Arn
+    Description: IAM role ARN

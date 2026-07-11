@@ -1,0 +1,199 @@
+/* ── Live Flight Picker ──────────────────────────────────────── */
+
+.lfp-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 12, 24, 0.92);
+  z-index: 2000;
+  display: flex;
+  align-items: flex-end;
+  animation: lfpFadeIn 0.2s ease;
+}
+
+@keyframes lfpFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.lfp-panel {
+  width: 100%;
+  background: #0d1220;
+  border-top: 1px solid #1e2d45;
+  border-radius: 16px 16px 0 0;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  animation: lfpSlideUp 0.25s ease;
+}
+
+@keyframes lfpSlideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.lfp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid #1e2d45;
+  flex-shrink: 0;
+}
+
+.lfp-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #e0e6f0;
+}
+
+.lfp-subtitle {
+  font-size: 0.75rem;
+  color: #4b5563;
+  margin-top: 2px;
+  font-family: 'Courier New', monospace;
+}
+
+.lfp-close {
+  background: transparent;
+  border: none;
+  color: #4b5563;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.lfp-close:hover { color: #e0e6f0; }
+
+/* Loading / error / empty */
+.lfp-loading,
+.lfp-error,
+.lfp-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: #6b7a99;
+  font-size: 0.88rem;
+}
+
+.lfp-spinner {
+  font-size: 1.5rem;
+  animation: lfpPulse 1.5s infinite;
+  margin-bottom: 8px;
+}
+
+@keyframes lfpPulse {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 1; }
+}
+
+.lfp-error { color: #f87171; }
+.lfp-error-hint {
+  font-size: 0.78rem;
+  color: #4b5563;
+  margin-top: 6px;
+}
+
+/* Flight list */
+.lfp-list {
+  overflow-y: auto;
+  flex: 1;
+  padding: 8px;
+}
+
+.lfp-flight {
+  width: 100%;
+  background: #111827;
+  border: 1px solid #1e2d45;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 6px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  gap: 2px 8px;
+}
+
+.lfp-flight:hover:not(:disabled) {
+  border-color: #7eb8f7;
+  background: #0a1a30;
+}
+
+.lfp-flight--selecting {
+  border-color: #7eb8f7;
+  background: #0a1a30;
+}
+
+.lfp-flight:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.lfp-flight-callsign {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #7eb8f7;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.05em;
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.lfp-flight-stats {
+  display: flex;
+  gap: 10px;
+  font-size: 0.78rem;
+  color: #6b7a99;
+  font-family: 'Courier New', monospace;
+  grid-column: 2;
+  grid-row: 1;
+  align-items: center;
+}
+
+.lfp-flight-pos {
+  font-size: 0.72rem;
+  color: #374151;
+  font-family: 'Courier New', monospace;
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+
+.lfp-flight-loading {
+  font-size: 0.72rem;
+  color: #7eb8f7;
+  grid-column: 1 / -1;
+  grid-row: 3;
+  margin-top: 4px;
+}
+
+/* Footer */
+.lfp-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  border-top: 1px solid #1e2d45;
+  flex-shrink: 0;
+}
+
+.lfp-footer > span {
+  font-size: 0.68rem;
+  color: #374151;
+}
+
+.lfp-sim-btn {
+  background: transparent;
+  border: 1px solid #1e2d45;
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: #6b7a99;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.lfp-sim-btn:hover {
+  border-color: #4b5563;
+  color: #9ca3af;
+}

@@ -1,0 +1,150 @@
+.flight-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100svh;
+  padding: 32px 20px;
+  gap: 40px;
+  background: #0a0e1a;
+  color: #e0e6f0;
+}
+
+.entry-header {
+  text-align: center;
+}
+
+.logo {
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  color: #7eb8f7;
+  margin-bottom: 8px;
+}
+
+.tagline {
+  color: #6b7a99;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.entry-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+  max-width: 360px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7a99;
+}
+
+.field input {
+  background: #111827;
+  border: 1px solid #1e2d45;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 1.1rem;
+  color: #e0e6f0;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.1em;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.field input:focus {
+  border-color: #7eb8f7;
+}
+
+.field input::placeholder {
+  color: #374151;
+}
+
+.error {
+  font-size: 0.8rem;
+  color: #f87171;
+}
+
+.seat-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.seat-toggle button {
+  flex: 1;
+  padding: 10px;
+  background: #111827;
+  border: 1px solid #1e2d45;
+  border-radius: 8px;
+  color: #6b7a99;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.seat-toggle button.active {
+  background: #0f2744;
+  border-color: #7eb8f7;
+  color: #7eb8f7;
+}
+
+.seat-hint {
+  font-size: 0.78rem;
+  color: #4b5563;
+  margin: 0;
+}
+
+.start-btn {
+  padding: 14px;
+  background: #1a3a6b;
+  border: 1px solid #7eb8f7;
+  border-radius: 8px;
+  color: #7eb8f7;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.05em;
+}
+
+.start-btn:hover {
+  background: #1e4a8a;
+}
+
+.known-routes {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.known-routes p {
+  font-size: 0.78rem;
+  color: #4b5563;
+  margin: 0;
+}
+
+.route-chip {
+  background: transparent;
+  border: 1px solid #1e2d45;
+  border-radius: 20px;
+  padding: 6px 16px;
+  color: #6b7a99;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.route-chip:hover {
+  border-color: #7eb8f7;
+  color: #7eb8f7;
+}

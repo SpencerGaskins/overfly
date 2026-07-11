@@ -1,0 +1,755 @@
+{
+  "route": {
+    "flightNumber": "DL3675",
+    "operator": "Delta Air Lines (SkyWest)",
+    "aircraft": "E175",
+    "origin": "KSEA",
+    "destination": "KDEN",
+    "departureLocal": "08:30 PDT",
+    "arrivalLocal": "12:26 MDT",
+    "seating": {
+      "eastbound": {
+        "primary": "A side (left/north) — Rainier, Hanford, Snake River Plain",
+        "secondary": "C/D side (right/south) — Adams, St. Helens, Oregon high desert"
+      },
+      "westbound": {
+        "primary": "C/D side (right/south) — Rockies climbout, afternoon Cascades",
+        "secondary": "A side (left/north) — Wyoming basin, Snake River"
+      }
+    }
+  },
+
+  "systemPrompt": {
+    "role": "You are an expert aerial guide with deep knowledge of geology, history, ecology, and human geography. The passenger is looking out their window at 28,000-35,000 feet. Your job is to make what they see feel alive — not a tour script, but a genuine conversation that follows their curiosity. Always offer a divergent path. Never give a dead end. If the passenger asks 'what's that?' you have context below to anchor your response. Current position, altitude, heading, and seat side are in the context. Use them.",
+    "contextFields": [
+      "latitude",
+      "longitude", 
+      "altitudeFt",
+      "headingDeg",
+      "seatSide",
+      "activeWaypoint",
+      "conversationHistory",
+      "turbulenceReport",
+      "timeOfDay"
+    ]
+  },
+
+  "waypoints": [
+    {
+      "id": "WP001",
+      "name": "Duwamish River Industrial Corridor",
+      "lat": 47.53,
+      "lon": -122.25,
+      "radiusMiles": 3,
+      "altitudeWindowFt": [0, 8000],
+      "heading": "eastbound",
+      "seatSide": "both",
+      "triggerPhase": "departure",
+      "hook": "One of the most contaminated Superfund sites in the US is directly below on rotation. Boeing built the B-17 here. The river itself was straightened by hand in 1913 — workers physically moved the entire channel to make room for industry.",
+      "divergentPaths": [
+        "Boeing B-17 production and WWII air war",
+        "Superfund cleanup process and what that actually means",
+        "Duwamish tribe — still federally unrecognized despite being Seattle's original inhabitants",
+        "How rivers get straightened and what it does to ecosystems"
+      ],
+      "interruptBehavior": "queue",
+      "priority": 2
+    },
+    {
+      "id": "WP002",
+      "name": "Mt. Rainier North Flank",
+      "lat": 46.85,
+      "lon": -121.73,
+      "radiusMiles": 40,
+      "altitudeWindowFt": [15000, 38000],
+      "heading": "eastbound",
+      "seatSide": "A",
+      "triggerPhase": "climb",
+      "hook": "The most topographically prominent peak in the lower 48 — more vertical rise from its base than any other mountain, including Everest measured the same way. There are 26 named glaciers. The Carbon Glacier is the lowest-elevation glacier in the contiguous US. Paradise weather station once held the world record for annual snowfall.",
+      "divergentPaths": [
+        "Lahar risk — flow paths cover Puyallup and Orting suburbs, essentially zero evacuation time",
+        "USGS volcano monitoring network and what the sensors actually measure",
+        "The 26 glaciers and accelerating melt rates",
+        "Why prominence vs height is a more honest measure of a mountain"
+      ],
+      "interruptBehavior": "immediate",
+      "priority": 1
+    },
+    {
+      "id": "WP003",
+      "name": "Yakima Valley",
+      "lat": 46.60,
+      "lon": -120.50,
+      "radiusMiles": 10,
+      "altitudeWindowFt": [25000, 38000],
+      "heading": "eastbound",
+      "seatSide": "A",
+      "triggerPhase": "cruise",
+      "hook": "This valley produces roughly 75% of all US hops. Every IPA you have ever had probably has Yakima in it. The valley sits at the same latitude as Burgundy, France — which is why the wine coming out of here is genuinely world-class and not a regional novelty.",
+      "divergentPaths": [
+        "How hops are grown and why this specific valley dominates",
+        "Yakima wine appellations and how they compare to European equivalents",
+        "Rain shadow effect — how the Cascades create this desert at this latitude",
+        "Apple production — Yakima is also the apple capital of the US"
+      ],
+      "interruptBehavior": "queue",
+      "priority": 3
+    },
+    {
+      "id": "WP004",
+      "name": "Hanford Site",
+      "lat": 46.65,
+      "lon": -119.49,
+      "radiusMiles": 25,
+      "altitudeWindowFt": [28000, 38000],
+      "heading": "eastbound",
+      "seatSide": "A",
+      "triggerPhase": "cruise",
+      "hook": "56 million gallons of radioactive waste sit in aging underground tanks directly below. This site produced the plutonium for the Trinity test and Fat Man — the bomb dropped on Nagasaki. The B Reactor is now a national historic landmark you can actually tour. It is the only place on earth where you can stand next to the machine that produced the material that ended World War II.",
+      "divergentPaths": [
+        "The Manhattan Project — who built Hanford and how fast",
+        "The cleanup — ongoing since 1989, projected completion 2077, most contaminated nuclear site in Western hemisphere",
+        "B Reactor tour — what you actually see and why it's worth going",
+        "The workers — most had no idea what they were building"
+      ],
+      "interruptBehavior": "immediate",
+      "priority": 1
+    },
+    {
+      "id": "WP005",
+      "name": "Columbia-Snake River Confluence",
+      "lat": 46.21,
+      "lon": -119.03,
+      "radiusMiles": 8,
+      "altitudeWindowFt": [28000, 38000],
+      "heading": "eastbound",
+      "seatSide": "both",
+      "triggerPhase": "cruise",
+      "hook": "Lewis and Clark camped exactly at this confluence in October 1805. For thousands of years before that it was one of the largest trading hubs in North America — dozens of tribes converging to trade salmon, camas root, and obsidian. The scale of those gatherings rivaled any market in the contemporary world.",
+      "divergentPaths": [
+        "Lewis and Clark — what they actually found here and how they were received",
+        "Celilo Falls — the most productive fishery in North America, now drowned by The Dalles Dam in 1957",
+        "Camas root economy and how it sustained entire civilizations",
+        "The dams — 4 lower Snake River dams and the ongoing salmon restoration debate"
+      ],
+      "interruptBehavior": "queue",
+      "priority": 2
+    },
+    {
+      "id": "WP006",
+      "name": "Snake River Plain",
+      "lat": 43.80,
+      "lon": -114.50,
+      "radiusMiles": 20,
+      "altitudeWindowFt": [30000, 38000],
+      "heading": "eastbound",
+      "seatSide": "both",
+      "triggerPhase": "cruise",
+      "hook": "The entire flat plain below is the scar of the Yellowstone hotspot moving northeast over millions of years. The North American plate is drifting over a fixed plume of magma. What you're looking at is what's left after the hotspot burned through. The magma chamber currently under Yellowstone will eventually produce the next eruption — and the plain shows exactly where it has been.",
+      "divergentPaths": [
+        "Yellowstone supervolcano — actual eruption probability vs public perception",
+        "How hotspot tracks work and what other ones exist globally",
+        "The Bonneville Flood — ancient megaflood that carved much of this landscape",
+        "Why Idaho is America's largest trout producer — the aquifer fed by this geology"
+      ],
+      "interruptBehavior": "queue",
+      "priority": 2
+    },
+    {
+      "id": "WP007",
+      "name": "Shoshone Falls / Twin Falls",
+      "lat": 42.59,
+      "lon": -114.40,
+      "radiusMiles": 8,
+      "altitudeWindowFt": [30000, 38000],
+      "heading": "eastbound",
+      "seatSide": "CD",
+      "triggerPhase": "cruise",
+      "hook": "Shoshone Falls drops 45 feet higher than Niagara. Almost no one outside Idaho has heard of it. During irrigation season, so much water is diverted upstream that the falls can be reduced to a trickle. The same river that carves one of the most dramatic waterfalls in North America gets essentially turned off for agriculture.",
+      "divergentPaths": [
+        "Why Niagara is famous and Shoshone isn't — tourism history and railroad marketing",
+        "Western water rights — prior appropriation doctrine and what it means",
+        "Evel Knievel's 1974 Snake River Canyon jump attempt — it happened right here",
+        "The Snake River Canyon geology — carved by the same Bonneville megaflood"
+      ],
+      "interruptBehavior": "queue",
+      "priority": 3
+    },
+    {
+      "id": "WP008",
+      "name": "Craters of the Moon",
+      "lat": 43.42,
+      "lon": -113.55,
+      "radiusMiles": 10,
+      "altitudeWindowFt": [30000, 38000],
+      "heading": "eastbound",
+      "seatSide": "A",
+      "triggerPhase": "cruise",
+      "hook": "NASA trained Apollo astronauts here because it is the closest terrain on Earth to the lunar surface. The last eruption was roughly 2,000 years ago. In geologic terms that is this morning — this field is not finished.",
+      "divergentPaths": [
+        "Apollo training program — which astronauts trained here and what they learned",
+        "Lava tube caves beneath the surface — some still uncharted",
+        "Why basaltic lava fields look lunar and what that tells us about the Moon's formation",
+        "The next eruption — what USGS monitoring shows"
+      ],
+      "interruptBehavior": "queue",
+      "priority": 2
+    },
+    {
+      "id": "WP009",
+      "name": "Rock Springs / Wyoming",
+      "tier": "premium",
+      "category": "history_legend",
+      "requiresVisualConfirmation": false,
+      "emotionalRegister": "curiosity",
+      "lat": 41.59,
+      "lon": -109.20,
+      "radiusMiles": 60,
+      "altitudeWindowFt": [30000, 38000],
+      "heading": "eastbound",
+      "seatSide": "both",
+      "triggerPhase": "cruise",
+      "hook": "The dark seams cut into the hills below are coal — and they're the only reason Rock Springs exists. Union Pacific didn't build a town near coal; they built a town to mine coal to feed their own trains. The railroad created a city just to feed itself.",
+      "divergentPaths": [
+        "Chinese railroad workers — the full history of who built the transcontinental railroad and what they received for it",
+        "The Page Act and Chinese Exclusion Act — how the massacre fed into federal policy",
+        "Rock Springs today — coal industry decline and what replaced it",
+        "The survivors — what happened to the Chinese community after the massacre"
+      ],
+      "interruptBehavior": "queue",
+      "priority": 2
+    },
+    {
+      "id": "WP010",
+      "name": "Rawlins / Tom Horn Country",
+      "tier": "premium",
+      "category": "history_legend",
+      "requiresVisualConfirmation": false,
+      "emotionalRegister": "drama",
+      "lat": 41.79,
+      "lon": -107.23,
+      "radiusMiles": 60,
+      "altitudeWindowFt": [30000, 38000],
+      "heading": "eastbound",
+      "seatSide": "both",
+      "triggerPhase": "cruise",
+      "hook": "Below you is the country where Tom Horn worked as a hired gun for the cattle barons — and where he was hanged in 1903 for a killing he may not have committed. He was one of the last men executed by a drop-and-lever gallows he helped design himself, for a different prisoner. The frontier was closing fast enough that Horn outlived the era that made him useful, and it killed him for it.",
+      "divergentPaths": [
+        "Tom Horn — Pinkerton detective, Army scout, hired range detective, killer",
+        "The range wars — cattle barons vs homesteaders and what was actually at stake",
+        "Wyoming's frontier justice system and how it differed from eastern courts",
+        "The Johnson County War — the event that made Horn necessary, from the cattle barons' perspective"
+      ],
+      "interruptBehavior": "queue",
+      "priority": 3
+    },
+    {
+      "id": "WP016",
+      "name": "Hells Canyon",
+      "tier": "premium",
+      "category": "landmark",
+      "requiresVisualConfirmation": true,
+      "emotionalRegister": "discovery",
+      "lat": 45.25,
+      "lon": -116.65,
+      "radiusMiles": 100,
+      "altitudeWindowFt": [28000, 38000],
+      "heading": "eastbound",
+      "seatSide": "A",
+      "triggerPhase": "cruise",
+      "hook": "The gorge below is deeper than the Grand Canyon, and almost nobody's heard of it. The Snake River carved it, and it happens to mark the exact line where Idaho and Oregon quietly touch — a state border most passengers fly over without knowing it's there.",
+      "divergentPaths": [
+        "Why Hells Canyon stayed obscure while the Grand Canyon became iconic",
+        "The Snake River's full carving history across three states",
+        "Idaho-Oregon border geography and how state lines follow rivers",
+        "Wildlife in the canyon — bighorn sheep and one of the last wild river stretches"
+      ],
+      "interruptBehavior": "queue",
+      "priority": 2
+    },
+    {
+      "id": "WP017",
+      "name": "Massacre Rocks",
+      "tier": "premium",
+      "category": "history_legend",
+      "requiresVisualConfirmation": false,
+      "emotionalRegister": "curiosity",
+      "lat": 42.67,
+      "lon": -112.68,
+      "radiusMiles": 40,
+      "altitudeWindowFt": [28000, 38000],
+      "heading": "eastbound",
+      "seatSide": "both",
+      "triggerPhase": "cruise",
+      "hook": "Despite the name, nothing was massacred at Massacre Rocks. Pioneers named it out of fear after a skirmish that happened somewhere else entirely — and the wrong name just stuck for 160 years. Sometimes the scariest story about a place is the one that never actually happened there.",
+      "divergentPaths": [
+        "How the naming myth spread and why it never got corrected",
+        "The actual 1862 skirmish that inspired the fear",
+        "Oregon Trail landmarks that got their names wrong",
+        "The real Massacre Rocks State Park — what's there today"
+      ],
+      "interruptBehavior": "queue",
+      "priority": 3
+    },
+    {
+      "id": "WP018",
+      "name": "Bear Lake",
+      "tier": "premium",
+      "category": "landmark",
+      "requiresVisualConfirmation": true,
+      "emotionalRegister": "wonder",
+      "lat": 42.02,
+      "lon": -111.32,
+      "radiusMiles": 50,
+      "altitudeWindowFt": [28000, 38000],
+      "heading": "eastbound",
+      "seatSide": "CD",
+      "triggerPhase": "cruise",
+      "hook": "That impossibly blue water below shouldn't exist in high desert — it's Caribbean-colored because of suspended limestone particles, not depth. Locals call it the Caribbean of the Rockies. There's also a lake monster legend older than the state of Idaho, and it's outlasted every scientist who's tried to explain it away.",
+      "divergentPaths": [
+        "The limestone particle science behind the color",
+        "The Bear Lake Monster legend — origins and modern sightings",
+        "Why this lake sits exactly on the Idaho-Utah border",
+        "Bear Lake's unique endemic fish species found nowhere else on Earth"
+      ],
+      "interruptBehavior": "queue",
+      "priority": 3
+    },
+    {
+      "id": "WP019",
+      "name": "Green River / Flaming Gorge",
+      "tier": "premium",
+      "category": "landmark",
+      "requiresVisualConfirmation": true,
+      "emotionalRegister": "wonder",
+      "lat": 41.10,
+      "lon": -109.47,
+      "radiusMiles": 60,
+      "altitudeWindowFt": [28000, 38000],
+      "heading": "eastbound",
+      "seatSide": "both",
+      "triggerPhase": "cruise",
+      "hook": "The canyon opening below is 50 million years of lake sediment, cut clean by the Green River. John Wesley Powell launched his first expedition down this exact river in 1869 — one arm, no maps, heading into country nobody had charted. He didn't know if the river ended in a waterfall or an ocean.",
+      "divergentPaths": [
+        "John Wesley Powell's 1869 expedition — how it actually went",
+        "The 50-million-year lake sediment record and what it preserves",
+        "Flaming Gorge Dam and reservoir — modern engineering on an ancient river",
+        "Why Powell lost an arm and how it didn't stop him"
+      ],
+      "interruptBehavior": "queue",
+      "priority": 2
+    },
+    {
+      "id": "WP020",
+      "name": "Fort Bridger",
+      "tier": "premium",
+      "category": "history_legend",
+      "requiresVisualConfirmation": false,
+      "emotionalRegister": "discovery",
+      "lat": 41.32,
+      "lon": -110.39,
+      "radiusMiles": 40,
+      "altitudeWindowFt": [28000, 38000],
+      "heading": "eastbound",
+      "seatSide": "both",
+      "triggerPhase": "cruise",
+      "hook": "Down there, Jim Bridger built a trading post in the middle of nowhere — and accidentally created the most important fork in the American West. The Oregon Trail, California Trail, and Mormon Trail all split apart right at Fort Bridger. Every wagon train stopped here and had to decide who they were about to become.",
+      "divergentPaths": [
+        "Jim Bridger — mountain man, trapper, unlikely trail-post founder",
+        "Where the three trails actually diverge and why here",
+        "Fort Bridger's later life as a US Army outpost",
+        "How pioneers decided which trail to take at this fork"
+      ],
+      "interruptBehavior": "queue",
+      "priority": 2
+    },
+    {
+      "id": "WP021",
+      "name": "South Pass",
+      "tier": "premium",
+      "category": "history_legend",
+      "requiresVisualConfirmation": false,
+      "emotionalRegister": "drama",
+      "lat": 42.4667,
+      "lon": -108.8000,
+      "radiusMiles": 60,
+      "altitudeWindowFt": [28000, 38000],
+      "heading": "eastbound",
+      "seatSide": "both",
+      "triggerPhase": "cruise",
+      "hook": "Out your window, the South Pass gave an erroneous sense of ease to westward travelers. This gentle saddle — nothing like a mountain pass — was the point of no return. 800 miles behind, 1,200 still ahead.",
+      "divergentPaths": [
+        "Why South Pass looks nothing like a mountain pass",
+        "What travelers abandoned on the trail to lighten their loads by this point",
+        "The Continental Divide split — water flowing two different directions from here",
+        "Oregon, California, and Mormon Trail traffic through South Pass"
+      ],
+      "interruptBehavior": "immediate",
+      "priority": 1
+    },
+    {
+      "id": "WP011",
+      "name": "Laramie Basin Turbulence Zone",
+      "lat": 41.31,
+      "lon": -105.59,
+      "radiusMiles": 15,
+      "altitudeWindowFt": [28000, 38000],
+      "heading": "eastbound",
+      "seatSide": "both",
+      "triggerPhase": "cruise",
+      "hook": "DYNAMIC — pull live NOAA PIREP data here",
+      "dynamicContent": {
+        "source": "NOAA Aviation Weather PIREP API",
+        "endpoint": "https://aviationweather.gov/api/data/pirep",
+        "params": {
+          "bbox": "-107,40,-104,42",
+          "age": 2,
+          "format": "json"
+        },
+        "turbulencePresent": "The bumps you may be feeling right now have a name. The Laramie Basin is one of the most reliably turbulent corridors in commercial aviation — mountain wave action off the Medicine Bow Range. The crew knows exactly what this is. The aircraft is built for it. The fasten seatbelt sign is on because at this altitude and speed even light chop is worth respecting.",
+        "turbulenceAbsent": "You're in smooth air right now, but this basin — the Laramie — is one of the most reliably turbulent corridors in commercial aviation on other days. Mountain wave off the Medicine Bow Range. Today the atmosphere is cooperating.",
+        "divergentPaths": [
+          "How mountain wave turbulence forms — the actual physics",
+          "PIREPs — how pilots report turbulence and how that data flows in real time",
+          "Clear air turbulence vs convective — why one is harder to predict",
+          "What the crew is actually doing right now when turbulence hits"
+        ]
+      },
+      "interruptBehavior": "immediate",
+      "priority": 1
+    },
+    {
+      "id": "WP012",
+      "name": "Rocky Mountain Front Range",
+      "lat": 40.20,
+      "lon": -105.30,
+      "radiusMiles": 15,
+      "altitudeWindowFt": [15000, 35000],
+      "heading": "eastbound",
+      "seatSide": "both",
+      "triggerPhase": "descent",
+      "hook": "You are looking at the exact fault line where the Rockies were thrust upward 70 million years ago during the Laramide orogeny. The transition from flat plains to 14,000-foot peaks with almost no foothills is geologically violent — and geologically recent. The plains were a shallow inland sea when those mountains started rising.",
+      "divergentPaths": [
+        "The Laramide orogeny — what caused it and why the Rockies look different from the Appalachians",
+        "The Western Interior Seaway — the inland sea that covered Denver",
+        "Fourteeners — Colorado has 58 peaks above 14,000 feet, more than any other state",
+        "Denver's elevation paradox — the city feels flat but sits a mile above sea level"
+      ],
+      "interruptBehavior": "immediate",
+      "priority": 1
+    },
+    {
+      "id": "WP013",
+      "name": "Denver International Airport Final",
+      "lat": 39.86,
+      "lon": -104.67,
+      "radiusMiles": 10,
+      "altitudeWindowFt": [0, 12000],
+      "heading": "eastbound",
+      "seatSide": "both",
+      "triggerPhase": "arrival",
+      "hook": "The white tensile roof is designed to evoke the Rockies — 34 fiberglass-coated peaks visible from miles out. The airport opened 3 years late and $2 billion over budget, spawning genuine conspiracy theories that persist today. The underground tunnels are real — they were built for an automated baggage system that never worked. The gargoyles in baggage claim are an intentional wink at the conspiracists.",
+      "divergentPaths": [
+        "The DEN construction disaster — what actually went wrong with the baggage system",
+        "The conspiracy theories — Blucifer the horse, the murals, the tunnels, what people actually believe",
+        "DEN as an aviation hub — why building 25 miles from the city made operational sense",
+        "The art program — DEN has one of the largest public art collections of any airport"
+      ],
+      "interruptBehavior": "queue",
+      "priority": 2
+    }
+  ],
+
+  "altitudeProfile": {
+    "description": "Altitude profile for SEA→DEN based on SID/STAR restrictions and typical cruise profile. Used to query PIREPs at correct flight level for each phase.",
+    "phases": [
+      {
+        "phase": "departure",
+        "name": "MONTN2 SID",
+        "altitudeWindowFt": [0, 10000],
+        "pirepQueryLevelFt": 6000,
+        "notes": "Climb out of KSEA, initial heading east"
+      },
+      {
+        "phase": "climb",
+        "name": "Climb to cruise",
+        "altitudeWindowFt": [10000, 28000],
+        "pirepQueryLevelFt": 18000,
+        "notes": "Crossing Cascades and eastern Washington"
+      },
+      {
+        "phase": "cruise",
+        "name": "Cruise FL330-FL370",
+        "altitudeWindowFt": [28000, 41000],
+        "pirepQueryLevelFt": 33000,
+        "notes": "Idaho, Wyoming, Colorado"
+      },
+      {
+        "phase": "descent",
+        "name": "FLATI5 STAR",
+        "altitudeWindowFt": [10000, 28000],
+        "pirepQueryLevelFt": 18000,
+        "notes": "Top of descent into KDEN"
+      }
+    ],
+    "starFixes": {
+      "name": "FLATI5",
+      "destination": "KDEN",
+      "fixes": [
+        {
+          "id": "FLATI",
+          "lat": 40.97,
+          "lon": -106.08,
+          "altitudeRestrictionFt": 24000,
+          "restrictionType": "at_or_below",
+          "hook": "You're beginning the descent into Denver. The Rockies are directly ahead — the Front Range rises from flat plains to 14,000-foot peaks with almost no foothills. That abrupt transition is geologically violent and geologically recent.",
+          "pirepQueryLevelFt": 24000
+        },
+        {
+          "id": "SAYGE",
+          "lat": 40.75,
+          "lon": -105.75,
+          "altitudeRestrictionFt": 16000,
+          "restrictionType": "at_or_below",
+          "hook": "Passing through 16,000 feet over the Front Range. The plains below were a shallow inland sea 70 million years ago when these mountains started rising. Denver sits at exactly one mile above sea level — the city feels flat but you're already higher than most of the eastern US.",
+          "pirepQueryLevelFt": 16000
+        },
+        {
+          "id": "TOMSN",
+          "lat": 40.55,
+          "lon": -105.35,
+          "altitudeRestrictionFt": 14000,
+          "restrictionType": "at_or_below",
+          "hook": "Through 14,000 feet — Colorado has 58 peaks above this altitude, more than any other state. The white tensile roof of Denver International is visible ahead. It was designed to evoke the Rockies. The airport opened 3 years late and $2 billion over budget.",
+          "pirepQueryLevelFt": 14000
+        },
+        {
+          "id": "BULDG",
+          "lat": 40.25,
+          "lon": -105.10,
+          "altitudeRestrictionFt": 12000,
+          "restrictionType": "at_or_below",
+          "hook": "Final approach into Denver. The gargoyles in baggage claim are an intentional wink at the conspiracy theorists. The underground tunnels are real — built for an automated baggage system that never worked.",
+          "pirepQueryLevelFt": 12000
+        }
+      ]
+    }
+  },
+
+  "returnRoute": {
+    "flightNumber": "DL3675",
+    "direction": "westbound",
+    "departureLocal": "13:10 MDT",
+    "arrivalLocal": "15:21 PDT",
+    "notes": "Flip seat side logic. C/D gets Rockies on climbout. Afternoon light on Cascades on approach is materially different from morning. Add Bonneville Dam and St. Helens crater (visible from east on westbound) as unique westbound waypoints.",
+    "uniqueWestboundWaypoints": [
+      {
+        "id": "WP014",
+        "name": "Bonneville Dam",
+        "lat": 45.64,
+        "lon": -121.94,
+        "radiusMiles": 8,
+        "altitudeWindowFt": [15000, 35000],
+        "heading": "westbound",
+        "seatSide": "A",
+        "triggerPhase": "descent",
+        "hook": "First major federal dam on the Columbia, completed 1937. Built by New Deal workers during the Depression. Woody Guthrie was paid $266 to write songs promoting it — he produced 26 songs in 30 days, including 'Roll On Columbia.' The dam essentially ended the Columbia as a salmon river at this point, drowning Celilo Falls and one of the oldest continuously inhabited trading sites in North America.",
+        "divergentPaths": [
+          "Woody Guthrie's Columbia River songs — the commission, the songs, the politics",
+          "Celilo Falls — what was lost when the dam filled in 1957",
+          "The fish ladder debate — do they work, and what the data actually shows",
+          "New Deal infrastructure — how Bonneville fit into a larger electrification strategy"
+        ],
+        "interruptBehavior": "queue",
+        "priority": 2
+      },
+      {
+        "id": "WP015",
+        "name": "Mt. St. Helens Crater",
+        "lat": 46.19,
+        "lon": -122.19,
+        "radiusMiles": 12,
+        "altitudeWindowFt": [20000, 38000],
+        "heading": "westbound",
+        "seatSide": "CD",
+        "triggerPhase": "descent",
+        "hook": "From the east on this heading you can see directly into the open horseshoe crater left by the 1980 eruption. The north face of the mountain simply ceased to exist on May 18, 1980 — the largest landslide in recorded history preceded the lateral blast by seconds. 57 people died. The blast zone is still visibly recovering 45 years later.",
+        "divergentPaths": [
+          "The lateral blast — why it killed people 8 miles away who thought they were safe",
+          "Harry Truman — the innkeeper who refused to leave and became a folk hero",
+          "The recovery — how ecosystems rebuild after total sterilization",
+          "David Johnston — the USGS volcanologist who died at the observation post, and what he radioed in his last seconds"
+        ],
+        "interruptBehavior": "immediate",
+        "priority": 1
+      }
+    ]
+  },
+
+  "metaConfig": {
+
+    "interruptLogic": {
+      "activeConversation": "queue — surface hook at natural pause with 'By the way, we just passed something worth knowing about if you want a detour...'",
+      "idlePassenger": "immediate — surface hook directly",
+      "passengerInitiated": "always respond — passenger asks 'what's that?' triggers nearest active waypoint context regardless of queue state",
+      "turbulenceAlert": "always immediate — overrides all queue state, never withheld"
+    },
+
+    "ambientContext": {
+      "description": "Always maintain current position context in system prompt so passenger can ask 'what's that?' at any moment and get a grounded answer",
+      "updateFrequencySeconds": 30,
+      "fields": ["lat", "lon", "altitudeFt", "headingDeg", "seatSide", "groundSpeedKts", "timeLocal"]
+    },
+
+    "turbulenceLookahead": {
+      "description": "Two-layer turbulence awareness system — forecast prediction plus real-time pilot validation",
+      "layers": [
+        {
+          "name": "GTG Forecast — Predictive Layer",
+          "source": "NOAA Graphical Turbulence Guidance",
+          "endpoint": "https://aviationweather.gov/api/data/airsigmet",
+          "params": {
+            "type": "airsigmet",
+            "format": "json"
+          },
+          "pollFrequencyMinutes": 10,
+          "lookaheadNm": 75,
+          "flightLevelWindowFt": 2000,
+          "logic": "Query every 10 min. Filter returned polygons by current bbox extended 75nm ahead on current heading, and by FL window ±2000ft of current altitude. If hit detected, calculate intercept distance and arm turbulence hook.",
+          "intensityMap": {
+            "LGT": "light — barely noticeable",
+            "MOD": "moderate — you will feel this",
+            "SEV": "severe — crew will be seated",
+            "EXTRM": "extreme — rare, structurally significant"
+          }
+        },
+        {
+          "name": "PIREP Validation — Real-Time Layer",
+          "source": "NOAA Pilot Reports",
+          "endpoint": "https://aviationweather.gov/api/data/pirep",
+          "params": {
+            "format": "json",
+            "age": 2,
+            "type": "turb"
+          },
+          "triggerCondition": "GTG hit detected — fire PIREP query to validate or negate",
+          "bboxRadiusNm": 30,
+          "ageWindowMinutes": 60,
+          "logic": "Query PIREPs within 30nm of forecasted turb polygon and within last 60 minutes. Cross-reference altitude. Classify result as CONFIRM, NEGATE, or INSUFFICIENT_DATA."
+        }
+      ],
+      "hookTemplates": {
+        "forecastOnly_LGT": "Just a heads up — atmospheric data shows a chance of light turbulence in about {distanceNm} miles at our flight level. The crew is aware. It's nothing to be concerned about, but worth knowing.",
+        "forecastOnly_MOD": "Something worth knowing — we're likely to hit some moderate turbulence in roughly {distanceNm} miles. You'll feel it. The aircraft handles this routinely. This is a good moment to make sure your seatbelt is loosely fastened.",
+        "confirmed_LGT": "Heads up — light bumps likely in about {distanceNm} miles. Pilots ahead of us on this route are reporting it too, so it's real. Nothing dramatic.",
+        "confirmed_MOD": "Moderate turbulence ahead in roughly {distanceNm} miles — pilots who just flew through are confirming it. The crew knows. The aircraft is built for this. Seatbelt on.",
+        "negated": "The forecast showed potential turbulence ahead, but pilots who just flew through are reporting smooth air. Looks like we may get a pass today.",
+        "insufficient_data": "Forecast data suggests possible turbulence ahead. No recent pilot reports in the area to confirm or deny — we'll see what we find.",
+        "postEvent_smooth": "That was the zone the forecast flagged. Smooth through it — sometimes the atmosphere cooperates.",
+        "postEvent_turb": "That was the turbulence the forecast predicted. Now you know what moderate mountain wave feels like. The Laramie Basin does this regularly — it's a function of the Medicine Bow Range geometry and the prevailing westerlies."
+      },
+      "divergentPaths": [
+        "How GTG forecasts are generated — NWP models and what they're actually solving for",
+        "Why PIREPs are the ground truth and why there aren't enough of them",
+        "Mountain wave mechanics — the standing wave that causes this specific turbulence",
+        "Clear air turbulence vs convective — why CAT is harder to predict and harder to see",
+        "What the flight crew is doing right now — checklist, comms, decision tree",
+        "Turbulence intensity scale — what LGT/MOD/SEV/EXTRM actually mean structurally"
+      ]
+    },
+
+    "dataHarvest": {
+      "description": "Anonymized behavioral signal collection — no PII, patterns only",
+      "trackPerWaypoint": [
+        "engagementDurationSeconds",
+        "divergentPathChosen",
+        "passengerInitiated",
+        "conversationDepth",
+        "dropOffPoint",
+        "turbulenceHookEngagement"
+      ],
+      "trackPerFlight": [
+        "totalEngagementMinutes",
+        "waypointsTriggered",
+        "waypointsEngaged",
+        "passengerInitiatedQueries",
+        "originAirport",
+        "destinationAirport",
+        "seatClass"
+      ],
+      "aggregateReporting": {
+        "tourismBoardSignal": "Flag waypoints where engagement > 180 seconds as high-intent destination interest. Report by origin airport to identify feeder markets.",
+        "airlineReport": "Engagement rate by route, seat class, time of day. Demonstrates IFE value proposition.",
+        "contentPerformance": "Rank waypoints by engagement depth and divergent path selection. Informs content investment priorities."
+      }
+    },
+
+    "revenueStreams": {
+      "stream1": {
+        "name": "IFE Platform Licensing",
+        "model": "B2B — license to Panasonic Avionics, Thales, Collins Aerospace, or direct to airline",
+        "pitch": "Differentiated IFE content that demonstrably increases passenger engagement vs standard seatback entertainment",
+        "pricing": "Per-flight or per-seat-mile licensing. Negotiate through IFE vendor relationship."
+      },
+      "stream2": {
+        "name": "Tourism Board Content Sponsorship",
+        "model": "State and regional tourism boards sponsor waypoint depth for their geography",
+        "pitch": "We put your state in front of 4M+ coastal passengers annually who would never have considered it. Here is the engagement data. Here is the intent signal. Here is conversion to actual bookings.",
+        "targetStates": ["Wyoming", "Idaho", "Montana", "Eastern Washington", "Nevada", "Utah"],
+        "note": "Sponsored content must maintain editorial integrity — depth and honesty are the product. No puffery."
+      },
+      "stream3": {
+        "name": "Behavioral Intent Data",
+        "model": "Aggregated, anonymized destination interest reports sold to tourism boards, hotel groups, travel agencies",
+        "pitch": "Not demographics. Declared interest — a passenger who spent 9 minutes on Shoshone Falls self-identified. We know their origin airport. That is a conversion-ready lead cohort.",
+        "legal": "Requires clear opt-in consent at session start. GDPR and CCPA compliant architecture from day one."
+      },
+      "stream4": {
+        "name": "In-Moment Booking Conversion",
+        "model": "Affiliate or direct partnership with travel booking platforms",
+        "pitch": "Passenger engages deeply with Craters of the Moon → app surfaces 'Want to go?' → one tap to booking partner with pre-populated origin and interest context",
+        "trigger": "Engagement > 180 seconds on destination waypoint",
+        "note": "Must feel organic not transactional. The moment has to earn it."
+      }
+    },
+
+    "flyoverCountryThesis": {
+      "description": "Core editorial position — not a feature, a philosophy",
+      "statement": "Flyover country is the most geologically violent, historically brutal, and culturally underrepresented terrain in North America. The product does not just entertain passengers — it structurally dismantles coastal dismissiveness in real time at FL310, to exactly the audience most likely to hold it.",
+      "tourismBoardPitch": "We are not advertising. We are creating discovery. Nobody wants to be advertised to at 35,000 feet. Everyone wants to be surprised by what is below them. We create genuine curiosity — you just need to be there when they land.",
+      "highValueTargets": [
+        "Wyoming — Shoshone Falls, Tom Horn, Laramie, Tetons",
+        "Idaho — Craters of the Moon, Snake River Canyon, Sawtooth Range",
+        "Montana — Unlimited content, near-zero current tourism marketing penetration to coastal markets",
+        "Eastern Washington — Hanford B Reactor, Columbia confluence, Palouse hills",
+        "Nevada interior — Basin and Range geology, ghost mining towns, Extraterrestrial Highway",
+        "Utah — Beyond the national parks everyone knows, the geology nobody talks about"
+      ]
+    },
+
+    "liveDataSources": [
+      {
+        "name": "NOAA G-AIRMET / SIGMET Turbulence Forecast",
+        "endpoint": "https://aviationweather.gov/api/data/airsigmet",
+        "usedAt": ["systemwide — 75nm lookahead, polled every 10 min"],
+        "purpose": "Predictive turbulence layer — forecast polygons with FL range and intensity",
+        "cost": "Free, public API"
+      },
+      {
+        "name": "NOAA Aviation Weather PIREPs",
+        "endpoint": "https://aviationweather.gov/api/data/pirep",
+        "usedAt": ["systemwide — triggered by GTG hit for validation"],
+        "purpose": "Real-time pilot report validation of forecast turbulence",
+        "cost": "Free, public API"
+      },
+      {
+        "name": "FlightAware AeroAPI",
+        "endpoint": "https://aeroapi.flightaware.com/aeroapi",
+        "usedAt": ["systemwide — position source if IFE GPS not available"],
+        "purpose": "Live position, altitude, heading, ground speed",
+        "cost": "Paid — $0.005/query at demo scale, negligible"
+      }
+    ]
+  }
+}
+
