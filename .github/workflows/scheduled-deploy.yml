@@ -1,0 +1,44 @@
+name: Scheduled Production Deploy
+
+# Runs once daily at 2:00 AM Pacific Time (structured deploy cadence —
+# avoids paying for ad-hoc `netlify deploy --prod` runs throughout the day).
+# PT is UTC-8 (standard) / UTC-7 (daylight). Cron is UTC-only, so this uses
+# 10:00 UTC, which covers most of the year correctly for PST (winter).
+# During PDT (summer, UTC-7) this will fire at 3:00 AM PT instead of 2:00 AM —
+# a 1-hour drift twice a year at DST transitions. Acceptable for a nightly
+# build; tighten with a second cron line if exact 2:00 AM year-round matters.
+#
+# Manual trigger (workflow_dispatch) is also enabled so you can force a
+# deploy on demand without waiting for the schedule or using local CLI.
+
+on:
+  schedule:
+    - cron: '0 10 * * *'   # 2:00 AM PST / 3:00 AM PDT
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Deploy to Netlify (production)
+        uses: netlify/actions/cli@master
+        with:
+          args: deploy --prod --dir=dist --functions=netlify/functions
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
