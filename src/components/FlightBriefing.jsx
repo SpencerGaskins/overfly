@@ -192,26 +192,68 @@ export default function FlightBriefing({ flight, onReady }) {
 
   async function buildTurbulenceSummary(anxietyLevel = 'aware') {
     const zones = []
-    // Sample key route points for turbulence
-    const checkPoints = [
-      { name: 'Cascades', lat: 47.20, lon: -119.32, levelFt: 18000 },
-      { name: 'Snake River Plain', lat: 43.51, lon: -112.07, levelFt: 33000 },
-      { name: 'Laramie Basin', lat: 41.31, lon: -105.59, levelFt: 33000 },
-      { name: 'Front Range', lat: 40.20, lon: -105.10, levelFt: 24000 },
+
+    // Named regions, used only to label a zone when a checkpoint falls near
+    // one. Checkpoints below are NOT limited to these — see note below.
+    const NAMED_REGIONS = [
+      { name: 'Cascades', lat: 47.20, lon: -119.32, radius: 1.0 },
+      { name: 'Snake River Plain', lat: 43.51, lon: -112.07, radius: 1.5 },
+      { name: 'Laramie Basin', lat: 41.31, lon: -105.59, radius: 1.0 },
+      { name: 'Front Range', lat: 40.20, lon: -105.10, radius: 1.0 },
     ]
-    for (const pt of checkPoints) {
-      try {
-        const pireps = await fetchPIREPs(pt.lat, pt.lon, 150, 3)
-        const turbPireps = pireps.filter(p => p.tbInt1 && p.tbInt1 !== '' && p.tbInt1 !== 'NEG' && p.tbInt1 !== 'NONE')
-        if (turbPireps.length > 0) {
-          const intensity = classifyTurbulence(turbPireps)
-          if (intensity !== 'none') {
-            zones.push({ name: pt.name, intensity, count: turbPireps.length, anxietyLevel })
-          }
-        }
-      } catch { /* silent */ }
+    function nameFor(lat, lon) {
+      for (const r of NAMED_REGIONS) {
+        if (Math.abs(lat - r.lat) <= r.radius && Math.abs(lon - r.lon) <= r.radius) return r.name
+      }
+      return 'En route'
     }
-    return zones
+
+    // IMPORTANT: previously this only checked 4 hand-picked named points,
+    // leaving real gaps in route coverage (e.g. the WA/ID border area near
+    // Lewiston was never sampled at all — three route points in that stretch
+    // were skipped). That caused the briefing to report "smooth air" while
+    // an in-flight check moments later found moderate turbulence in exactly
+    // that unchecked gap. Fix: sample every point along the actual filed
+    // route (ROUTE_SEA_DEN) instead of a hand-picked subset, so there are no
+    // blind spots. PIREP radius (150nm) combined with ~100-150nm point
+    // spacing on this route gives overlapping coverage with no gaps.
+    //
+    // Run in parallel (not sequential await-in-loop) — going from 4 to 15
+    // checkpoints would otherwise ~4x the briefing load time.
+    const results = await Promise.all(
+      ROUTE_SEA_DEN.map(async ([lat, lon]) => {
+        try {
+          const pireps = await fetchPIREPs(lat, lon, 150, 3)
+          const turbPireps = pireps.filter(p => p.tbInt1 && p.tbInt1 !== '' && p.tbInt1 !== 'NEG' && p.tbInt1 !== 'NONE')
+          if (turbPireps.length > 0) {
+            const intensity = classifyTurbulence(turbPireps)
+            if (intensity !== 'none') {
+              return { lat, lon, name: nameFor(lat, lon), intensity, count: turbPireps.length, anxietyLevel }
+            }
+          }
+        } catch { /* silent */ }
+        return null
+      })
+    )
+
+    for (const z of results) {
+      if (z) zones.push(z)
+    }
+
+    // Dedup adjacent zones with the same name+intensity (route points close
+    // together in the same region would otherwise show as repeated entries).
+    // Zones are pushed in route order since ROUTE_SEA_DEN.map preserves index
+    // order in Promise.all's results even though execution is concurrent.
+    const deduped = []
+    for (const z of zones) {
+      const prev = deduped[deduped.length - 1]
+      if (prev && prev.name === z.name && prev.intensity === z.intensity) {
+        prev.count += z.count
+      } else {
+        deduped.push({ ...z })
+      }
+    }
+    return deduped
   }
 
 
