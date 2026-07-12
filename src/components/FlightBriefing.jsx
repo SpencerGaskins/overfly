@@ -193,19 +193,33 @@ export default function FlightBriefing({ flight, onReady }) {
   async function buildTurbulenceSummary(anxietyLevel = 'aware') {
     const zones = []
 
-    // Named regions, used only to label a zone when a checkpoint falls near
-    // one. Checkpoints below are NOT limited to these — see note below.
-    const NAMED_REGIONS = [
-      { name: 'Cascades', lat: 47.20, lon: -119.32, radius: 1.0 },
-      { name: 'Snake River Plain', lat: 43.51, lon: -112.07, radius: 1.5 },
-      { name: 'Laramie Basin', lat: 41.31, lon: -105.59, radius: 1.0 },
-      { name: 'Front Range', lat: 40.20, lon: -105.10, radius: 1.0 },
-    ]
+    // Every point on ROUTE_SEA_DEN gets its own name (matching the
+    // descriptive comments already in src/data/routes.js), rather than
+    // reverse-matching against a handful of small-radius named "hotspots".
+    // The hotspot approach broke region labeling the moment full-route
+    // coverage was added — most of the 15 route points fell outside the
+    // tiny 1-degree radii and fell through to a generic "En route" label,
+    // including the exact point that found the turbulence. Keyed by
+    // "lat,lon" string since route points are plain [lat, lon] tuples.
+    const POINT_NAMES = {
+      '47.45,-122.31': 'Puget Sound',
+      '47.43,-121.72': 'Cascade foothills',
+      '47.2,-119.32':  'Cascades',
+      '46.5,-117.5':   'WA/ID border (Palouse)',
+      '45.5,-116':     'Hells Canyon area',
+      '44.2,-114':     'Central Idaho',
+      '43.51,-112.07': 'Snake River Plain',
+      '42.8,-110.5':   'SW Wyoming',
+      '41.38,-108.34': 'Wyoming basin',
+      '41.2,-107':     'Rawlins area',
+      '41.1,-106':     'Medicine Bow',
+      '41.31,-105.59': 'Laramie Basin',
+      '40.65,-105.2':  'Fort Collins',
+      '40.2,-105':     'Front Range',
+      '39.86,-104.67': 'Denver approach',
+    }
     function nameFor(lat, lon) {
-      for (const r of NAMED_REGIONS) {
-        if (Math.abs(lat - r.lat) <= r.radius && Math.abs(lon - r.lon) <= r.radius) return r.name
-      }
-      return 'En route'
+      return POINT_NAMES[`${lat},${lon}`] || 'En route'
     }
 
     // IMPORTANT: previously this only checked 4 hand-picked named points,
