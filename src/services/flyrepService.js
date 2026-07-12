@@ -77,7 +77,12 @@ export async function submitAnxietyProfile({
                       : flight_number === 'DL3676' ? 'DEN-SEA'
                       : null
 
-  const { data, error } = await supabase
+  // NOTE: deliberately no .select() here — same reasoning as submitFlyrep()
+  // above. anxiety_profiles has an INSERT-only RLS policy for anon (see
+  // supabase/migrations/003); chaining .select() triggers a RETURNING
+  // clause that Postgres checks against SELECT-level RLS, not INSERT,
+  // and fails even though the insert itself is allowed.
+  const { error } = await supabase
     .from('anxiety_profiles')
     .insert({
       session_id,
@@ -87,16 +92,15 @@ export async function submitAnxietyProfile({
       turbulence_sensitivity,
       curiosity_style,
     })
-    .select()
 
   if (error) {
     // Non-fatal — profile capture is best-effort
     console.warn('[AnxietyProfile] Submission failed:', error.message)
   } else {
-    console.log('[AnxietyProfile] Saved:', data?.[0]?.id || data?.id || 'ok')
+    console.log('[AnxietyProfile] Saved (session:', session_id, ')')
   }
 
-  return { data, error }
+  return { data: null, error }
 }
 
 /**
