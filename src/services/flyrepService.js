@@ -26,7 +26,14 @@ export async function submitFlyrep({
 }) {
   const corridorHash = deriveCorridorHash(lat, lon)
 
-  const { data, error } = await supabase
+  // NOTE: deliberately no .select() here. flyreps has an INSERT-only RLS
+  // policy for anon (write-only from client, analytics reads happen
+  // server-side with the service role key — see supabase/migrations/002).
+  // Chaining .select() asks PostgREST to return the row via RETURNING,
+  // which Postgres evaluates against SELECT-level RLS, not INSERT — so it
+  // fails with "new row violates row-level security policy" even though
+  // the insert itself is allowed. Caller only needs { error } anyway.
+  const { error } = await supabase
     .from('flyreps')
     .insert({
       flight_number,
@@ -39,14 +46,12 @@ export async function submitFlyrep({
       corridor_hash: corridorHash,
       session_id,
     })
-    .select()
-    .single()
 
   if (error) {
     console.error('[FLYREP] Submission failed:', error.message)
   }
 
-  return { data, error }
+  return { data: null, error }
 }
 
 /**
