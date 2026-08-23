@@ -5,12 +5,11 @@ Status: design scope document, pre-implementation. Written to be argued against.
 Companion document: `requirements.md` in this folder. Where the two disagree, requirements
 win and this document should be updated to match, not the reverse.
 
-Reconciliation note: this design was drafted before the deduplication discussion that
-produced Requirement 4's identity and proximity-matching criteria, and before requirements
-were renumbered. The data model here already anticipates most of it (`poi_candidates` with
-`curation_status`, and the pageid idempotence property), but the proximity tolerance and
-suspected-duplicate review band are not yet reflected. Treat requirement numbers referenced
-in this document as unverified until a reconciliation pass is done.
+Reconciled against `requirements.md` after requirements signoff. Place identity and
+deduplication (Requirement 4.7 through 4.18) are covered by Component 5b, the
+`poi_candidate_sources` and `poi_duplicate_reviews` data models, and Properties 12 through
+16. Each correctness property carries a `Validates` reference to the requirement criteria it
+exercises.
 
 ## Overview
 
@@ -485,6 +484,55 @@ the roadmap already raises whether such titles should be filtered before reachin
 guide. Capture is the right place to record that classification as data. Acting on it is a
 delivery or curation decision.
 
+### Component 5b: Place Identity Resolver
+
+Placement: inside the batch component, running BEFORE the enricher. Ordering matters. An
+extract fetch and a visual determination are wasted work on a place already in the corpus,
+and Wikipedia calls are the expensive part of this pipeline.
+
+Purpose: guarantee that one physical place is one record, regardless of how many tiles
+returned it, how many routing variants pass near it, how many times ingestion has run, or
+how many sources describe it.
+
+Responsibilities:
+- Fast path: if the discovery source supplies a stable identifier, resolve on that. For
+  Wikipedia this is `pageid`, already backed by a unique constraint.
+- Slow path: when no shared identifier exists, resolve on geographic proximity using the
+  existing GIST index, not on exact coordinate equality. Sources disagree about the
+  coordinates of the same place routinely.
+- Apply two bands rather than one threshold. Inside the tight band, merge automatically.
+  Between the tight band and a wider review band, record a suspected duplicate for human
+  review and keep both records.
+- Optionally supplement the geographic test with title similarity when proximity alone is
+  ambiguous.
+- On a match, append the new source and its identifier to the existing record rather than
+  discarding the discovery.
+- Suppress candidate creation entirely where a premium or curated POI already covers the
+  place.
+- On a match against an existing record found near an additional routing variant, add a
+  geometry row for that variant rather than creating a second POI.
+- Support merging two existing records later determined to be the same place, without losing
+  curated content or source associations.
+
+The two-band design is the part worth defending. A single proximity threshold forces a
+choice between two failure modes, and both are bad. Set it loose and several distinct
+historic buildings in one town collapse into one record, silently destroying content
+opportunities that nobody knows were lost. Set it tight and the same place reported at
+slightly different coordinates by two sources becomes two records, which inflates apparent
+coverage and can make a narrative dead zone look populated. Splitting into an automatic band
+and a review band means the ambiguous middle produces a question for a human instead of a
+silent wrong answer in either direction. The cost is a review queue, which is acceptable
+because this pipeline already produces a human worklist as its primary output.
+
+The premium and curated suppression rule exists for a specific reason worth stating.
+Coverage counting in Component 6 is the mechanism that decides where content gets written.
+If a curated seed for South Pass and an unreviewed Wikipedia candidate for South Pass both
+sit in the same window, a naive count reports two POIs where one story exists, and a window
+that genuinely needs attention can appear satisfied.
+
+Tolerance values are deliberately unspecified. They should be set against real observed
+coordinate scatter for places known to appear in multiple sources, not guessed. See OQ9.
+
 ### Component 6: Coverage Gap Analyzer
 
 Purpose: produce the prioritized list of where curated content needs to be written. This is
@@ -667,6 +715,54 @@ Separating geometry into its own table is what makes the northern versus souther
 representable. One candidate, two variants, two different cross-track values, potentially
 different eligibility.
 
+### poi_candidate_sources
+
+One row per source that has described a given place. This is what makes the identity
+resolver's corroboration behavior representable, and it is the reason a repeat discovery is
+not simply dropped.
+
+```pascal
+STRUCTURE PoiCandidateSource
+  candidate_id     : UUID
+  source           : String       // wikipedia | curated | premium | manual
+  source_ref       : String       // pageid, premium_pois.id, or editorial reference
+  source_title     : String       // the title AS GIVEN by this source
+  source_lat       : Decimal(9,6) // the coordinates AS GIVEN by this source
+  source_lon       : Decimal(9,6)
+  first_seen_at    : Timestamptz
+  last_seen_at     : Timestamptz
+END STRUCTURE
+```
+
+Two notes. The per-source title and coordinates are retained rather than normalized away,
+because the scatter between sources for the same place is exactly the data needed to choose
+the tolerance values in OQ9, and discarding it means that question can never be answered
+from real evidence. Three independent sources describing one place is also a useful curation
+signal in its own right, suggesting a place with enough written about it to build a story
+from.
+
+### poi_duplicate_reviews
+
+The review band queue. Records pairs the resolver judged too close to be confidently
+distinct and too far apart to merge automatically.
+
+```pascal
+STRUCTURE PoiDuplicateReview
+  id                : UUID
+  candidate_a_id    : UUID
+  candidate_b_id    : UUID
+  separation_miles  : Decimal
+  title_similarity  : Decimal?     // if a similarity test was applied
+  status            : String       // pending | same_place | distinct_places
+  resolved_at       : Timestamptz?
+  resolved_note     : String?
+END STRUCTURE
+```
+
+Both records stay live while status is `pending`. The resolver must not block ingestion on an
+unresolved review, and coverage counting must treat a pending pair conservatively rather than
+assuming either answer. Marking a pair `same_place` triggers the merge path.
+
 `curation_status` state machine, with capture's authority marked:
 
 ```pascal
@@ -734,6 +830,8 @@ Every table introduced here follows the strictest version of that pattern delibe
 | `routing_variants` | enabled | no policy | no policy | full |
 | `poi_candidates` | enabled | no policy | no policy | full |
 | `poi_candidate_geometry` | enabled | no policy | no policy | full |
+| `poi_candidate_sources` | enabled | no policy | no policy | full |
+| `poi_duplicate_reviews` | enabled | no policy | no policy | full |
 | `coverage_gaps` | enabled | no policy | no policy | full |
 | `tile_scan_log` | enabled | no policy | no policy | full |
 
@@ -825,6 +923,8 @@ particular, a batch containing one record with `depArpt = KDEN` and a different 
 `arrArpt = KSEA`, where no single record has both, yields zero DEN to SEA tracks. This is
 the false-positive that actually occurred during investigation.
 
+**Validates: Requirements 1.1, 1.2**
+
 ### Property 2: Interest eligibility is symmetric and distance-monotonic
 
 For any variant centerline and any two points A and B whose cross-track distances to that
@@ -834,6 +934,8 @@ centerline to point yields the same value within floating point tolerance, and a
 mirrored to the opposite side of the centerline at equal distance has identical
 eligibility.
 
+**Validates: Requirements 3.1, 3.4**
+
 ### Property 3: Visual eligibility implies interest eligibility, never the converse
 
 For any candidate, `visual_resolvable = true` implies `interest_eligible = true` on the same
@@ -842,6 +944,8 @@ variant. There exists no candidate with `visual_resolvable = true` and
 that never generates an interest-eligible, visually-unresolvable candidate is not
 exercising the distinction the design is built on.
 
+**Validates: Requirements 5.1, 5.2**
+
 ### Property 4: Dedup by pageid is idempotent
 
 For any sequence of tile scan results, possibly with overlapping tiles and repeated
@@ -849,11 +953,15 @@ pageids, applying candidate insertion once and applying it any number of additio
 yields identical candidate sets. Corollary: for any two orderings of the same tile scan
 results, the resulting candidate set is identical.
 
+**Validates: Requirements 4.8, 4.13**
+
 ### Property 5: Capture never marks a candidate as delivery-eligible
 
 For any input, no capture code path produces a candidate with `curation_status` of `curated`
 or `premium`, and no capture write transitions an existing `curated` or `premium` candidate
 to any other status or overwrites its tier.
+
+**Validates: Requirements 4.6**
 
 ### Property 6: Corridor filtering is total and loss-free
 
@@ -862,11 +970,15 @@ number of records present, and every retained record has a corridor hash in the 
 set. No record is retained without a corridor hash, and no record is both retained and
 dropped.
 
+**Validates: Requirements 1.6**
+
 ### Property 7: Bundle delivery arrays contain only curated or premium entries
 
 For any candidate set containing an arbitrary mix of statuses, the generated bundle's
 delivery-facing arrays contain exactly those candidates with tier `curated` or `premium`,
 and every such entry carries non-null `existence_status` and `visual_resolvable`.
+
+**Validates: Requirements 6.6, 9.3**
 
 ### Property 8: Along-track projection is monotonic along a variant
 
@@ -875,11 +987,15 @@ along the polyline, their `along_track_miles` values preserve that order, and ev
 `along_track_miles` lies in the closed interval from zero to the variant's
 `total_track_miles`.
 
+**Validates: Requirements 4.3, 6.1**
+
 ### Property 9: Tiling covers the buffered corridor with no gaps
 
 For any variant centerline and the 125 mile buffered polygon around it, every point in that
 polygon lies within the query radius of at least one generated tile center, and every
 generated tile radius is at most 10,000 meters.
+
+**Validates: Requirements 3.1, 4.1**
 
 ### Property 10: Amendment classification does not fabricate variants
 
@@ -888,11 +1004,56 @@ For any pair of consecutive amendment messages for the same `flight_ref` whose
 is created and no new geometry revision is recorded. This is the observed UAL360 FL360 to
 FL370 case.
 
+**Validates: Requirements 1.5, 2.2**
+
 ### Property 11: Existence status defaults conservatively
 
 For any candidate whose existence could not be determined from available evidence,
 `existence_status` is `unknown` and `visual_resolvable` is false. There is no input for
 which an undetermined existence yields `extant`.
+
+**Validates: Requirements 5.3**
+
+### Property 12: Place resolution never creates a duplicate for the same place
+
+For any set of discovered locations, if two discoveries resolve to the same place under the
+identity rules, whether by shared source identifier or by falling inside the tight proximity
+band, exactly one candidate record exists for that place afterward. Resolution is order
+independent: processing discoveries in any permutation yields the same candidate count.
+
+**Validates: Requirements 4.7, 4.9**
+
+### Property 13: Review-band pairs are never merged automatically
+
+For any pair of locations separated by more than the tight tolerance and at most the review
+band, both records continue to exist and a pending review row is created. There is no input
+for which a separation greater than the tight tolerance results in an automatic merge.
+
+**Validates: Requirements 4.10**
+
+### Property 14: A matched discovery is recorded, never silently dropped
+
+For any discovery that matches an existing place, the number of source association rows for
+that place increases by one when the source and source reference are new, and the existing
+record's identity is unchanged. No matching discovery reduces the recorded source count.
+
+**Validates: Requirements 4.16**
+
+### Property 15: Curated coverage suppresses candidate creation
+
+For any discovered location where a premium or curated POI already covers that place, no
+candidate record is created, and the coverage count for the enclosing window is unchanged by
+the discovery.
+
+**Validates: Requirements 4.11, 6.7**
+
+### Property 16: Additional variant proximity adds geometry, not a second place
+
+For any existing place subsequently found within the interest corridor of an additional
+routing variant, the candidate count is unchanged and the geometry row count for that
+candidate increases by exactly one.
+
+**Validates: Requirements 4.12**
 
 ### Test library
 
@@ -1134,6 +1295,15 @@ Whether the first corridor fill should scan the full 125 mile corridor uniformly
 prioritize near-track tiles and known dead zones and widen outward. Affects how quickly the
 gap report becomes useful, and interacts with the requirement that gap analysis distinguish
 unscanned geography from genuinely empty geography.
+
+OQ9. Proximity tolerance values for place identity.
+The tight automatic-merge band and the wider review band in Component 5b are unspecified.
+They should be set from real observed coordinate scatter for places that appear in more than
+one source, which the `poi_candidate_sources` per-source coordinates are retained
+specifically to provide. Related and harder: Requirement 4.11 asks whether an existing POI
+"covers" a discovered location, and proximity alone may not answer it. A curated seed about a
+mountain range and a candidate about one specific mine inside that range share coordinates
+but are not the same subject. Feature extent class may need to participate in the decision.
 
 OQ8. Corridor set beyond DEN and SEA.
 STDDS is filtered to KSEA and KDEN, but TFMS is national and unfiltered, so observation
