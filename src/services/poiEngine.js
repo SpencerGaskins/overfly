@@ -26,6 +26,72 @@ const VISIBLE_RADIUS_MILES = {
   35000: 150,
 }
 
+// Wikipedia POI FIRING geometry — deliberately NOT a simple circular radius.
+// Confirmed real bug 2026-07-13: "I.O.O.F. Building (Idaho Falls)" fired
+// while the aircraft was still >100 miles away. Root design insight from
+// user discussion: a single radius conflates two geometrically different
+// things — what's visible out the SIDE window right now (a wide lateral
+// distance is genuinely realistic at cruise altitude — the existing 150mi
+// VISIBLE_RADIUS_MILES scale is a reasonable proxy for that) versus what's
+// still ahead on the NOSE of the aircraft (150mi ahead means 15-20+ minutes
+// before you'd actually reach it — far too early to mention "right now").
+// Fix: decompose distance into along-track (ahead/behind, on the direction
+// of travel) and cross-track (lateral, perpendicular to travel) components.
+// Cross-track stays generous (reuses VISIBLE_RADIUS_MILES). Along-track
+// (ahead) uses a much tighter scale — user confirmed the 5/15/25/35/50mi
+// altitude scale-up is correct for the forward distance specifically.
+const WIKI_AHEAD_RADIUS_MILES = {
+  0:     5,
+  8000:  15,
+  18000: 25,
+  28000: 35,
+  35000: 50,
+}
+function wikiAheadRadiusMiles(altitudeFt) {
+  const levels = Object.keys(WIKI_AHEAD_RADIUS_MILES).map(Number).sort((a, b) => b - a)
+  for (const level of levels) {
+    if (altitudeFt >= level) return WIKI_AHEAD_RADIUS_MILES[level]
+  }
+  return 5
+}
+
+// Decompose a POI's position into along-track (ahead/behind, signed — positive
+// means ahead in the direction of travel) and cross-track (lateral, unsigned)
+// distance relative to the aircraft's current position and heading. Uses a
+// flat-earth local approximation (fine at this scale — corridor is ~800mi,
+// errors from ignoring Earth curvature over a single POI's offset are
+// negligible) rather than a full great-circle bearing calculation, matching
+// the precision level already used elsewhere in this file (distanceMiles
+// itself IS a proper haversine, this is just simpler for the projection step).
+function trackDecompose(lat, lon, poiLat, poiLon, isWestbound) {
+  // Unit vector of direction of travel in lat/lon space, roughly NW-SE for
+  // this corridor. Approximate using the actual route endpoints so this
+  // works correctly regardless of the exact local bearing at any point.
+  const dirLat = isWestbound ? (47.45 - 39.86) : (39.86 - 47.45)
+  const dirLon = isWestbound ? (-122.31 - -104.67) : (-104.67 - -122.31)
+  const dirMag = Math.hypot(dirLat, dirLon)
+  const uLat = dirLat / dirMag
+  const uLon = dirLon / dirMag
+
+  // Vector from aircraft to POI, in degrees (small-angle approximation;
+  // scale longitude by cos(lat) so degrees are comparable in real distance)
+  const cosLat = Math.cos(lat * Math.PI / 180)
+  const vLat = poiLat - lat
+  const vLon = (poiLon - lon) * cosLat
+
+  // Project onto direction-of-travel unit vector for along-track distance;
+  // remaining perpendicular component is cross-track. Convert degrees to
+  // miles using ~69 miles/degree latitude (close enough at this scale).
+  const MILES_PER_DEGREE = 69
+  const alongDeg  = vLat * uLat + vLon * uLon
+  const crossLat  = vLat - alongDeg * uLat
+  const crossLon  = vLon - alongDeg * uLon
+  const alongMiles = alongDeg * MILES_PER_DEGREE
+  const crossMiles = Math.hypot(crossLat, crossLon) * MILES_PER_DEGREE
+
+  return { alongMiles, crossMiles }
+}
+
 // ── Haversine distance ────────────────────────────────────────────
 export function distanceMiles(lat1, lon1, lat2, lon2) {
   const R = 3958.8
@@ -145,15 +211,20 @@ export class POIEngine {
       }
     }
 
-    // Layer 2: Wikipedia POIs — only surface those AHEAD of the aircraft
-    const visRadius = visibleRadiusMiles(altitudeFt)
+    // Layer 2: Wikipedia POIs — surface those genuinely nearby, using
+    // along-track (ahead) / cross-track (lateral) decomposition instead of
+    // a single circular radius. See trackDecompose + WIKI_AHEAD_RADIUS_MILES
+    // comments above for the full reasoning.
+    const crossTrackLimit = visibleRadiusMiles(altitudeFt)   // wide — side window view
+    const aheadLimit       = wikiAheadRadiusMiles(altitudeFt) // tight — nose of aircraft
+    const isWestboundNow    = heading === 'westbound'
     const wikiInRange = this.wikipedia.filter(poi => {
       if (this.triggered.has(poi.pageid)) return false
-      const dist = distanceMiles(lat, lon, poi.lat, poi.lon)
-      if (dist > visRadius) return false
-      // Only surface POIs that are ahead (east of current position for SEA-DEN)
-      // Use a small buffer so POIs directly alongside also fire
-      if (poi.lon !== undefined && poi.lon < lon - 0.5) return false  // behind — skip
+      if (poi.lon === undefined) return false
+      const { alongMiles, crossMiles } = trackDecompose(lat, lon, poi.lat, poi.lon, isWestboundNow)
+      if (alongMiles < -5) return false            // behind — small buffer so alongside POIs still fire
+      if (alongMiles > aheadLimit) return false     // too far ahead — not "right now" yet
+      if (crossMiles > crossTrackLimit) return false // too far off to the side to see at all
       return true
     })
     if (wikiInRange.length > 0) {
@@ -171,7 +242,25 @@ export class POIEngine {
   }
 
   // ── Continuous PIREP lookahead — call every 30s ───────────────
+  // NOTE (2026-07-13): `currentStep` used to be passed straight through from
+  // FlightView's `simStep` state, which only advances during manual
+  // step-through simulation. During LIVE tracking, simStep never changes —
+  // it stays frozen at whatever it was, while `lat`/`lon` update from real
+  // ADS-B data. That meant the lookahead was always anchored to the wrong
+  // point on the route during live tracking (found via a live DL3676 flight
+  // showing turbulence at the wrong location). Fix: derive the lookahead
+  // index from the aircraft's ACTUAL current position (nearest route point),
+  // ignoring whatever step index was passed in — this works correctly for
+  // both simulation and live tracking, since both ultimately update lat/lon.
   async checkTurbulenceAhead(lat, lon, altitudeFt, routePoints, currentStep, anxietyLevel = 'aware') {
+    let nearestIdx = 0
+    let nearestDist = Infinity
+    for (let i = 0; i < routePoints.length; i++) {
+      const [rlat, rlon] = routePoints[i]
+      const d = distanceMiles(lat, lon, rlat, rlon)
+      if (d < nearestDist) { nearestDist = d; nearestIdx = i }
+    }
+    currentStep = nearestIdx
     // Always scan 150nm ahead to reliably detect turbulence
     // But only SURFACE the alert when within the profile's notify window
     // This prevents anxious passengers from having a 10-minute dread window

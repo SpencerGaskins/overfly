@@ -24,9 +24,15 @@ L.Icon.Default.mergeOptions({
 })
 
 // Icons
-const aircraftIcon = L.divIcon({
+// aircraftIcon was a static module-level constant hardcoded to rotate(90deg)
+// (pointing east) regardless of actual direction of travel — found
+// 2026-07-13 during the heading-hardcode fix walkthrough: on a westbound
+// (DEN→SEA) flight, position/POIs/turbulence were all correctly westbound,
+// but the plane icon itself still visually pointed east. Turned into a
+// function so it can rotate based on actual heading.
+const aircraftIcon = (isWestbound) => L.divIcon({
   className: '',
-  html: `<div style="font-size:24px;transform:rotate(90deg);filter:drop-shadow(0 0 4px #7eb8f7)">✈</div>`,
+  html: `<div style="font-size:24px;transform:rotate(${isWestbound ? -90 : 90}deg);filter:drop-shadow(0 0 4px #7eb8f7)">✈</div>`,
   iconSize: [28, 28], iconAnchor: [14, 14],
 })
 
@@ -72,12 +78,24 @@ function MapFollower({ position }) {
 }
 
 export default function FlightView({ flight, prefetchResult, onExit }) {
-  const { flightNumber, seatSide } = flight
+  const { flightNumber, seatSide, route } = flight
+
+  // ── Actual direction of travel, derived from the selected flight ──
+  // Previously hardcoded to 'eastbound' everywhere in this file, which broke
+  // the entire return flight (DL3676, DEN→SEA): wrong direction reported to
+  // the guide, eastbound-only POI filter silently excluded ALL premium
+  // content on the return leg, and the header always displayed "SEA → DEN"
+  // regardless of which flight was actually selected. Found via a real
+  // passenger's actual round-trip use of the app, not synthetic testing.
+  const isWestbound = route?.destination === 'KSEA'
+  const heading      = isWestbound ? 'westbound' : 'eastbound'
+  const routeLabel   = isWestbound ? 'DEN → SEA' : 'SEA → DEN'
+  const activeRoute  = isWestbound ? [...ROUTE_SEA_DEN].reverse() : ROUTE_SEA_DEN
 
   // Extract anxiety profile passed from briefing
   const anxietyLevel = prefetchResult?.anxietyProfile?.turbulenceSensitivity || 'aware'
 
-  const [position, setPosition]       = useState(ROUTE_SEA_DEN[0])
+  const [position, setPosition]       = useState(activeRoute[0])
   const [altitudeFt, setAltitudeFt]   = useState(0)
   const [simStep, setSimStep]         = useState(0)
   const [isSimulating, setIsSimulating] = useState(false)
@@ -110,8 +128,17 @@ export default function FlightView({ flight, prefetchResult, onExit }) {
   // Dead reckoning — used as position source when not simulating or live tracking
   const drRef = useRef(null)
 
-  const curatedWaypoints = waypointData.waypoints.filter(wp =>
-    wp.heading === 'eastbound' &&
+  // returnRoute.uniqueWestboundWaypoints exists in the data file (Bonneville
+  // Dam, Mt. St. Helens Crater) but was NEVER merged into the main waypoints
+  // array the filter below reads — it was completely unreachable regardless
+  // of the heading bug. Merging it in here so it's actually usable.
+  const allWaypoints = [
+    ...waypointData.waypoints,
+    ...(waypointData.returnRoute?.uniqueWestboundWaypoints || []),
+  ]
+
+  const curatedWaypoints = allWaypoints.filter(wp =>
+    wp.heading === heading &&
     (wp.seatSide === 'both' || wp.seatSide === seatSide || wp.seatSide === 'A')
   )
 
@@ -136,7 +163,7 @@ export default function FlightView({ flight, prefetchResult, onExit }) {
     } else {
       // Fallback if arriving without briefing
       setPrefetchProgress(0)
-      prefetchRoutePOIs(curatedWaypoints, ROUTE_SEA_DEN, setPrefetchProgress)
+      prefetchRoutePOIs(curatedWaypoints, activeRoute, setPrefetchProgress)
         .then(({ wikiPOIs: wiki, resolvedCurated }) => {
           setWikiPOIs(wiki)
           setPrefetchProgress(null)
@@ -173,10 +200,10 @@ export default function FlightView({ flight, prefetchResult, onExit }) {
   function stepForward() {
     setSimStep(s => {
       const next = s + 1
-      if (next >= ROUTE_SEA_DEN.length) { setIsSimulating(false); return s }
-      const [lat, lon] = ROUTE_SEA_DEN[next]
+      if (next >= activeRoute.length) { setIsSimulating(false); return s }
+      const [lat, lon] = activeRoute[next]
       setPosition([lat, lon])
-      setAltitudeFt(next === 0 ? 0 : next === ROUTE_SEA_DEN.length - 1 ? 5000 : 33000)
+      setAltitudeFt(next === 0 ? 0 : next === activeRoute.length - 1 ? 5000 : 33000)
       return next
     })
   }
@@ -192,7 +219,7 @@ export default function FlightView({ flight, prefetchResult, onExit }) {
     if (!engineRef.current) return
     const check = async () => {
       await engineRef.current.checkTurbulenceAhead(
-        position[0], position[1], altitudeFt, ROUTE_SEA_DEN, simStep, anxietyLevel
+        position[0], position[1], altitudeFt, activeRoute, simStep, anxietyLevel
       )
       setTurbAlert(engineRef.current.getTurbAlert()
         ? { ...engineRef.current.getTurbAlert() } : null)
@@ -221,10 +248,12 @@ export default function FlightView({ flight, prefetchResult, onExit }) {
     lastPoiQueryRef.current = { lat, lon }
 
     // Query Wikipedia POIs around current position + 150nm ahead on route
-    // Find the next few route points ahead of current position
-    const aheadPoints = ROUTE_SEA_DEN.filter(([wlat, wlon]) => {
-      // Points ahead = further east (higher lon for SEA-DEN)
-      return wlon > lon - 1.0
+    // Find the next few route points ahead of current position. "Ahead" was
+    // hardcoded as "higher longitude" (eastbound-only assumption) — on the
+    // westbound return flight this is backwards, so it must flip with
+    // direction.
+    const aheadPoints = activeRoute.filter(([wlat, wlon]) => {
+      return isWestbound ? wlon < lon + 1.0 : wlon > lon - 1.0
     }).slice(0, 5)
 
     const queryPoints = [[lat, lon], ...aheadPoints]
@@ -262,7 +291,7 @@ export default function FlightView({ flight, prefetchResult, onExit }) {
   // ── POI engine update on every position change ────────────────
   useEffect(() => {
     if (!engineRef.current) return
-    engineRef.current.update(position[0], position[1], altitudeFt, 'eastbound')
+    engineRef.current.update(position[0], position[1], altitudeFt, heading)
     setActivePOI(engineRef.current.getActive() ? { ...engineRef.current.getActive() } : null)
     setQueueLen(engineRef.current.getQueueLength())
     setTurbAlert(engineRef.current.getTurbAlert())
@@ -280,21 +309,27 @@ export default function FlightView({ flight, prefetchResult, onExit }) {
     setLiveTracking(true)
     setLiveStale(false)
 
-    // Rebuild POI engine with only POIs ahead of starting position
-    // Prevents all stale western POIs from firing during live session
+    // Rebuild POI engine with only POIs ahead of starting position.
+    // "Ahead" was hardcoded as "higher longitude" (eastbound-only assumption)
+    // — found 2026-07-13 during the systematic direction-bug audit, same
+    // class of bug as everywhere else in this file. Flips with direction.
     if (engineRef.current && initialPosition.lon) {
       const startLon = initialPosition.lon
-      const aheadWiki = wikiPOIs.filter(poi => poi.lon >= startLon - 0.5)
+      const aheadWiki = wikiPOIs.filter(poi =>
+        isWestbound ? poi.lon <= startLon + 0.5 : poi.lon >= startLon - 0.5
+      )
       engineRef.current = new POIEngine(curatedWaypoints, aheadWiki, seatSide)
       setWikiPOIs(aheadWiki)
-      console.log(`[live] Engine rebuilt with ${aheadWiki.length} POIs east of ${startLon.toFixed(2)}°`)
+      console.log(`[live] Engine rebuilt with ${aheadWiki.length} POIs ${isWestbound ? 'west' : 'east'} of ${startLon.toFixed(2)}°`)
     }
 
     // Stop any existing tracker
     if (trackerRef.current) trackerRef.current.stop()
 
-    // Create tracker and capture ref before async work
-    const tracker = new LiveTrackService('SEA-DEN')
+    // Create tracker and capture ref before async work. Corridor string was
+    // hardcoded to 'SEA-DEN' regardless of actual flight direction — found
+    // during the same 2026-07-13 audit.
+    const tracker = new LiveTrackService(isWestbound ? 'DEN-SEA' : 'SEA-DEN')
     trackerRef.current = tracker
 
     // Await follow so the initial poll + track fetch complete before interval starts
@@ -366,7 +401,7 @@ export default function FlightView({ flight, prefetchResult, onExit }) {
       <div className="fv-header">
         <div className="fv-flight">
           <span className="fv-fn">{flightNumber}</span>
-          <span className="fv-route">SEA → DEN</span>
+          <span className="fv-route">{routeLabel}</span>
         </div>
         <div className="fv-stats">
           <span>{Math.round(altitudeFt).toLocaleString()} ft</span>
@@ -395,11 +430,14 @@ export default function FlightView({ flight, prefetchResult, onExit }) {
           <TileLayer
             url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
             attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+            // Drop the "Leaflet |" prefix — CARTO's ToS requires their own
+            // credit to stay visible, but the Leaflet branding is optional.
+            prefix={false}
           />
           <MapFollower position={position} />
 
           <Polyline
-            positions={ROUTE_SEA_DEN}
+            positions={activeRoute}
             pathOptions={{ color: '#1e3a5f', weight: 2, dashArray: '6 4' }}
           />
 
@@ -446,7 +484,7 @@ export default function FlightView({ flight, prefetchResult, onExit }) {
             </Marker>
           ))}
 
-          <Marker position={position} icon={aircraftIcon} />
+          <Marker position={position} icon={aircraftIcon(isWestbound)} />
         </MapContainer>
       </div>
 
@@ -460,7 +498,7 @@ export default function FlightView({ flight, prefetchResult, onExit }) {
         </button>
         <button className="sim-btn" onClick={() => {
           setSimStep(0)
-          setPosition(ROUTE_SEA_DEN[0])
+          setPosition(activeRoute[0])
           setAltitudeFt(0)
           setIsSimulating(false)
           stopLiveTracking()
@@ -618,8 +656,8 @@ export default function FlightView({ flight, prefetchResult, onExit }) {
       {convOpen && (
         <ConversationPanel
           poi={convPOI}
-          position={{ lat: position[0], lon: position[1], altitudeFt, heading: 'eastbound' }}
-          corridor="SEA-DEN"
+          position={{ lat: position[0], lon: position[1], altitudeFt, heading }}
+          corridor={isWestbound ? 'DEN-SEA' : 'SEA-DEN'}
           onClose={() => {
             setConvOpen(false)
             engineRef.current?.endConversation()

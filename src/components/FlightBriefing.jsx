@@ -78,7 +78,15 @@ const LOADING_MESSAGES = [
 ]
 
 export default function FlightBriefing({ flight, onReady }) {
-  const { flightNumber, seatSide } = flight
+  const { flightNumber, seatSide, route } = flight
+
+  // Same class of bug as FlightView.jsx (found 2026-07-13 via real passenger
+  // round-trip use) — this component independently hardcoded KSEA/KDEN and
+  // "SEA → DEN" regardless of which flight was actually selected.
+  const isWestbound = route?.destination === 'KSEA'
+  const originIcao      = route?.origin      || 'KSEA'
+  const destinationIcao = route?.destination || 'KDEN'
+  const routeLabel      = isWestbound ? 'DEN → SEA' : 'SEA → DEN'
 
   // ── Screen flow: 'profile' → 'loading' → 'briefing' ──────────
   const [screen, setScreen]           = useState('profile')
@@ -96,8 +104,18 @@ export default function FlightBriefing({ flight, onReady }) {
   const [briefing, setBriefing]       = useState(null)
   const [prefetchResult, setPrefetchResult] = useState(null)
 
-  const curatedWaypoints = waypointData.waypoints.filter(wp =>
-    wp.heading === 'eastbound' &&
+  // Same bug/fix as FlightView.jsx (found 2026-07-13 via real passenger
+  // round-trip use): returnRoute.uniqueWestboundWaypoints exists in the data
+  // file but was never merged into the array this filter reads.
+  const allWaypoints = [
+    ...waypointData.waypoints,
+    ...(waypointData.returnRoute?.uniqueWestboundWaypoints || []),
+  ]
+  const heading = isWestbound ? 'westbound' : 'eastbound'
+  const activeRoute = isWestbound ? [...ROUTE_SEA_DEN].reverse() : ROUTE_SEA_DEN
+
+  const curatedWaypoints = allWaypoints.filter(wp =>
+    wp.heading === heading &&
     (wp.seatSide === 'both' || wp.seatSide === seatSide || wp.seatSide === 'A')
   )
 
@@ -123,10 +141,10 @@ export default function FlightBriefing({ flight, onReady }) {
         let bundleLoaded = false
 
         try {
-          const bundle = await fetchRouteBundle(corridorId('KSEA', 'KDEN'))
+          const bundle = await fetchRouteBundle(corridorId(originIcao, destinationIcao))
           // Bundle has pre-resolved hooks and Wikipedia POIs — use them directly
           resolvedCurated = bundle.waypoints.filter(wp =>
-            wp.heading === 'eastbound' &&
+            wp.heading === heading &&
             (wp.seatSide === 'both' || wp.seatSide === seatSide || wp.seatSide === 'A')
           )
           wikiPOIs = bundle.wikipedia_pois || []
@@ -158,10 +176,21 @@ export default function FlightBriefing({ flight, onReady }) {
         try { turbSummary = await buildTurbulenceSummary(anxietyProfile.turbulenceSensitivity) } catch {}
 
         let destWeather = null
-        try { destWeather = await fetchDestinationWeather('KDEN') } catch {}
+        try { destWeather = await fetchDestinationWeather(destinationIcao) } catch {}
 
-        // Show briefing immediately
-        const highlights = resolvedCurated.filter(wp => wp.priority <= 2).slice(0, 4)
+        // Show briefing immediately. Sort by actual distance from the
+        // route's start point (direction-aware) rather than relying on the
+        // JSON's file order — the file happens to list waypoints roughly
+        // west-to-east, which only produces correct highlight ordering for
+        // eastbound by coincidence. This makes ordering correct regardless
+        // of how many westbound waypoints get added in the future.
+        const [startLat, startLon] = activeRoute[0]
+        const sortedCurated = [...resolvedCurated].sort((a, b) => {
+          const distA = Math.hypot(a.lat - startLat, a.lon - startLon)
+          const distB = Math.hypot(b.lat - startLat, b.lon - startLon)
+          return distA - distB
+        })
+        const highlights = sortedCurated.filter(wp => wp.priority <= 2).slice(0, 4)
         setBriefing({ turbSummary, highlights, destWeather })
         setPrefetchResult({ wikiPOIs, resolvedCurated, anxietyProfile, sessionId })
 
@@ -224,50 +253,91 @@ export default function FlightBriefing({ flight, onReady }) {
 
     // IMPORTANT: previously this only checked 4 hand-picked named points,
     // leaving real gaps in route coverage (e.g. the WA/ID border area near
-    // Lewiston was never sampled at all — three route points in that stretch
-    // were skipped). That caused the briefing to report "smooth air" while
-    // an in-flight check moments later found moderate turbulence in exactly
-    // that unchecked gap. Fix: sample every point along the actual filed
-    // route (ROUTE_SEA_DEN) instead of a hand-picked subset, so there are no
-    // blind spots. PIREP radius (150nm) combined with ~100-150nm point
-    // spacing on this route gives overlapping coverage with no gaps.
+    // Lewiston was never sampled at all). That caused the briefing to report
+    // "smooth air" while an in-flight check moments later found moderate
+    // turbulence in exactly that unchecked gap. Fix: sample every point
+    // along the actual filed route (ROUTE_SEA_DEN) instead of a hand-picked
+    // subset, so there are no blind spots.
     //
-    // Run in parallel (not sequential await-in-loop) — going from 4 to 15
-    // checkpoints would otherwise ~4x the briefing load time.
-    const results = await Promise.all(
-      ROUTE_SEA_DEN.map(async ([lat, lon]) => {
+    // SECOND BUG (found after the first fix shipped): checkpoints are only
+    // ~100-150nm apart but each queries a 150nm PIREP radius, so adjacent
+    // checkpoints pick up the SAME live PIREPs repeatedly. Symptom: pilot
+    // report counts climbing per checkpoint (2, 4, 8, 19, 24, 27, 27, 27...)
+    // and 12 near-duplicate rows in a "quick outlook" card meant to be
+    // scannable pre-flight. Fix: dedupe PIREPs GLOBALLY by their raw report
+    // text (rawOb — NOAA's PIREP schema has no dedicated ID field, but
+    // rawOb is unique per report and stable) before attributing any report
+    // to a checkpoint, so the same report is never counted twice. Then
+    // merge adjacent route points that share turbulence into ONE contiguous
+    // zone (e.g. "Rawlins area to Denver approach") instead of showing
+    // every single point as its own row.
+    // Use activeRoute (direction-aware, reversed for westbound) instead of
+    // the raw ROUTE_SEA_DEN array — otherwise the turbulence outlook lists
+    // zones in west-to-east order regardless of actual direction of travel,
+    // meaning a westbound passenger would see Denver-area zones listed
+    // first and Seattle-area zones last — backwards from what they'll
+    // actually fly through. Found 2026-07-13, same session as the heading
+    // hardcode fix.
+    const perPointResults = await Promise.all(
+      activeRoute.map(async ([lat, lon]) => {
         try {
           const pireps = await fetchPIREPs(lat, lon, 150, 3)
-          const turbPireps = pireps.filter(p => p.tbInt1 && p.tbInt1 !== '' && p.tbInt1 !== 'NEG' && p.tbInt1 !== 'NONE')
-          if (turbPireps.length > 0) {
-            const intensity = classifyTurbulence(turbPireps)
-            if (intensity !== 'none') {
-              return { lat, lon, name: nameFor(lat, lon), intensity, count: turbPireps.length, anxietyLevel }
-            }
-          }
-        } catch { /* silent */ }
-        return null
+          return { lat, lon, pireps }
+        } catch {
+          return { lat, lon, pireps: [] }
+        }
       })
     )
 
-    for (const z of results) {
-      if (z) zones.push(z)
-    }
+    // Global dedup: first checkpoint to see a given report "claims" it.
+    // Route order is preserved (ROUTE_SEA_DEN.map keeps index order even
+    // though the awaits above run concurrently), so a report picked up by
+    // multiple overlapping checkpoints gets attributed to the first
+    // (westmost) one — the correct place for it geographically.
+    const seenReports = new Set()
+    const perPoint = perPointResults.map(({ lat, lon, pireps }) => {
+      const turbPireps = pireps.filter(p => {
+        if (!p.tbInt1 || p.tbInt1 === '' || p.tbInt1 === 'NEG' || p.tbInt1 === 'NONE') return false
+        const key = p.rawOb || `${p.receiptTime}-${p.lat}-${p.lon}`  // fallback if rawOb ever missing
+        if (seenReports.has(key)) return false
+        seenReports.add(key)
+        return true
+      })
+      const intensity = turbPireps.length > 0 ? classifyTurbulence(turbPireps) : 'none'
+      return { lat, lon, name: nameFor(lat, lon), intensity, count: turbPireps.length }
+    })
 
-    // Dedup adjacent zones with the same name+intensity (route points close
-    // together in the same region would otherwise show as repeated entries).
-    // Zones are pushed in route order since ROUTE_SEA_DEN.map preserves index
-    // order in Promise.all's results even though execution is concurrent.
-    const deduped = []
-    for (const z of zones) {
-      const prev = deduped[deduped.length - 1]
-      if (prev && prev.name === z.name && prev.intensity === z.intensity) {
-        prev.count += z.count
+    // Merge adjacent points into contiguous zones. A zone ends when
+    // turbulence stops or intensity changes; count sums across the merged
+    // stretch (safe now that dedup already happened above), and the label
+    // becomes a range when it spans more than one named point.
+    const INTENSITY_RANK = { light: 1, moderate: 2, severe: 3 }
+    let current = null
+    for (const pt of perPoint) {
+      if (pt.intensity === 'none' || pt.count === 0) {
+        if (current) { zones.push(current); current = null }
+        continue
+      }
+      if (current && current.intensity === pt.intensity) {
+        current.endName = pt.name
+        current.count += pt.count
       } else {
-        deduped.push({ ...z })
+        if (current) zones.push(current)
+        current = { startName: pt.name, endName: pt.name, intensity: pt.intensity, count: pt.count, anxietyLevel }
       }
     }
-    return deduped
+    if (current) zones.push(current)
+
+    // Return clean, non-duplicated, range-labeled zones in ROUTE ORDER
+    // (west to east / flight order) — NOT sorted by severity. Sorting by
+    // intensity destroys the one thing that makes this list useful: it
+    // should read in the order you'll actually fly through it.
+    return zones.map(z => ({
+      name: z.startName === z.endName ? z.startName : `${z.startName} to ${z.endName}`,
+      intensity: z.intensity,
+      count: z.count,
+      anxietyLevel: z.anxietyLevel,
+    }))
   }
 
 
@@ -323,16 +393,25 @@ export default function FlightBriefing({ flight, onReady }) {
     anxietyProfile.curiosityStyle !== null
 
   const seatLabel = seatSide === 'A' ? 'Left (A/B)' : 'Right (C/D)'
+  // Previously hardcoded to eastbound seat advantages regardless of actual
+  // direction — same bug class as everything else on this page. Real
+  // seating data for both directions already existed in
+  // waypoints SEA DEN.json's route.seating object but was never read.
+  const seatingData = waypointData.route?.seating?.[isWestbound ? 'westbound' : 'eastbound']
   const seatAdvantage = seatSide === 'A'
-    ? 'Rainier, Hanford, and the Snake River Plain'
-    : 'Mt. Adams, the Oregon high desert, and the Rockies on climbout'
+    ? (isWestbound
+        ? (seatingData?.secondary?.split('—')[1]?.trim() || 'Wyoming basin, Snake River')
+        : (seatingData?.primary?.split('—')[1]?.trim() || 'Rainier, Hanford, and the Snake River Plain'))
+    : (isWestbound
+        ? (seatingData?.primary?.split('—')[1]?.trim() || 'Rockies climbout, afternoon Cascades')
+        : (seatingData?.secondary?.split('—')[1]?.trim() || 'Mt. Adams, the Oregon high desert, and the Rockies on climbout'))
 
   return (
     <div className="briefing">
       <div className="briefing-header">
         <div className="briefing-flight">
           <span className="briefing-fn">{flightNumber}</span>
-          <span className="briefing-route">SEA → DEN</span>
+          <span className="briefing-route">{routeLabel}</span>
         </div>
         <div className="briefing-seat">Seat: {seatLabel}</div>
       </div>

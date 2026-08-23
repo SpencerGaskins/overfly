@@ -64,13 +64,26 @@ infrastructure false alarms also happened this session (Netlify CLI crash holdin
 port 8888, stale dev process) — those are resolved by restarting `dev.ps1`, not real
 app bugs, and are not on this list.
 
-- [ ] **Foskett drugstore visual-language fix** — guide said "what caught your eye
-  about it?" for a history/legend POI (Dr. Wilson Foskett Home and Drugstore, Wallace
-  ID) that is NOT visible from cruise altitude. Root cause: `guide.js` never received
-  `category`/`requiresVisualConfirmation` in `context.poi`, so the model had no way to
-  know visual language was inappropriate. **Already coded** — added explicit
-  visual-vs-story-only instruction to the context injection based on
-  `requiresVisualConfirmation`. NOT YET VERIFIED in dev.
+- [ ] **Visual/spatial-presence language fix — MAJOR, first attempt insufficient**
+  (escalated 2026-07-13). Original bug: guide said "what caught your eye about it?"
+  for a history/legend POI (Dr. Wilson Foskett Home and Drugstore, Wallace ID) not
+  visible from cruise altitude. First fix: added `requiresVisualConfirmation` context
+  to `guide.js` with an explicit blocklist of example phrases ("what caught your eye",
+  "can you see", "look down at"). **CONFIRMED INSUFFICIENT during 2026-07-13 dev
+  walkthrough** — a DIFFERENT POI (Funland, Idaho Falls — a Wikipedia-sourced POI,
+  burned down in the 1920s, no `requiresVisualConfirmation` field at all so it
+  correctly hits the "history/legend, no visual language" branch) still produced "What
+  draws you to that particular spot?" User's words: "the pervasiveness of this MAJOR
+  bug is everywhere." Root cause of the fix's failure: a phrase BLOCKLIST is fragile —
+  the model paraphrases around the exact banned words ("what draws you to" instead of
+  "what caught your eye") while committing the identical underlying error (implying
+  spatial/visual presence for something not visible or no longer existing). The
+  instruction needs to state the PRINCIPLE (don't imply the passenger can perceive or
+  be spatially drawn to something not visible/no longer physically present), not a
+  list of banned phrases the model can trivially route around. This needs a full
+  rewrite of that context instruction, and needs re-testing across MULTIPLE POIs (not
+  just one) before being considered fixed, per the "one passing test proves nothing"
+  rule already established this session.
 
 - [ ] **Dead-zone POI gap detection** — POIs cluster near populated areas (more
   Wikipedia coverage) with long empty stretches in between. Per the user: "a cluster
@@ -79,11 +92,40 @@ app bugs, and are not on this list.
   flag any window with near-zero POI coverage, use that list to prioritize writing new
   curated content for the actual gaps instead of guessing where they are.
 
-- [ ] **Geofence fall-out + premium radius widening** — confirmed via code read: no
-  POI, once queued during a conversation, is ever re-checked against the aircraft's
-  current position. `_drainQueue()` blindly pops the oldest queued POI when a
-  conversation ends, even if the aircraft has since flown well outside that POI's
-  radius. Design agreed with user through discussion:
+- [ ] **Geofence fall-out + premium radius widening** — STATUS: designed only, NOT
+  built. **Possible real-world repro 2026-07-13 (user has expressed doubt about this
+  explanation — NOT confirmed, do not treat as proven):** "South Superior Union Hall"
+  fired only after the user closed a Table Rock conversation, by which point the
+  aircraft had passed it. Timeline is consistent with the queue-fall-out scenario
+  (user was mid-conversation with Table Rock when South Superior Union Hall would have
+  been in range), but the user directly pushed back on this explanation ("hrm... I
+  doubt that") — likely because the SAME session also showed the unrelated, unresolved
+  Lander Peak/Table Rock firing-order confusion, and it's not clear these two
+  incidents are actually the same root cause rather than two different bugs both
+  happening to look similar on the surface. Treat as a plausible but UNVERIFIED lead,
+  not a confirmed diagnosis, until it can be tested in isolation.
+  **Related consequence surfaced by user (still testing live, 2026-07-13):** since
+  `this.triggered` is a permanent set with no re-fire allowed, if Lander Peak already
+  fired once — even incorrectly (too early / wrong distance, per the earlier
+  unresolved item) — it can NEVER fire again for the rest of the flight, even once the
+  aircraft reaches the geographically correct close range. This means a wrong-time
+  firing doesn't just look bad once, it permanently forfeits the correct-time firing
+  too. Worth deciding whether `triggered` should ever be reset/reconsidered, or whether
+  the real fix is ensuring correct-time firing happens reliably in the first place
+  (i.e., fixing the root firing-order bug matters more than any fall-out/re-fire logic
+  built on top of it).
+  Confirmed via code read: no POI, once queued during a conversation, is ever
+  re-checked against the aircraft's current position. `_drainQueue()` blindly pops the
+  oldest queued POI when a conversation ends, even if the aircraft has since flown
+  well outside that POI's radius. During 2026-07-13 dev walkthrough, user observed
+  what looked like fall-out already working (only the current POI's popup appeared,
+  previous ones seemed gone) — but this is NOT confirmed evidence of working fall-out
+  logic, since none has been written yet. More likely explanation: those earlier POIs
+  either already fired-and-were-dismissed (clearing `active`), or never fired at all
+  (same class of bug as the Hells Canyon auto-fire failure below) — both would produce
+  the same observed "only current POI visible" result without any pruning code
+  running. Do not treat this as verified until the actual pruning logic exists and is
+  tested directly. Design agreed with user through discussion:
   - Fall-out rule applies uniformly to ALL tiers (premium, curated, Wikipedia) — no
     tier exemption. Per user: spec treats radius as "guaranteed availability, not
     delivery" — an occasional miss due to bad timing is acceptable.
@@ -119,10 +161,16 @@ app bugs, and are not on this list.
   pattern exists that ISN'T trivia-quizzing either — a forced binary/survey-style
   question with academic meta-phrasing analyzing the guide's own narrative structure
   out loud: "What interests you more—the actual homesteading logistics, or the way the
-  place became legend?" This is self-aware meta-commentary, not genuine wonder. The
-  standard needs to explicitly rule out BOTH failure modes: (1) trivia only the guide
-  can answer, (2) forced-choice/meta-analytical survey questions. Neither models real
-  curiosity.
+  place became legend?" This is self-aware meta-commentary, not genuine wonder.
+  **Third bad pattern found 2026-07-13 (Table Rock example):** the guide asked "What
+  do you know about the fur trade era out here?" — literally inverting the
+  guide/passenger relationship, asking the PASSENGER to supply knowledge to the GUIDE.
+  Per user: "I HATE the guides question... it should tell the user to encourage them
+  to get more info, not ask them to explain it to the guide." The standard needs to
+  explicitly rule out THREE failure modes now: (1) trivia only the guide can answer,
+  (2) forced-choice/meta-analytical survey questions, (3) asking the passenger to
+  teach the guide instead of the guide offering to go deeper. None of these model
+  genuine curiosity from the guide toward the passenger.
 
 - [ ] **Cross-response factual contradiction (Beckman Farmstead)** — separate bug,
   not a closing-statement issue. Same conversation, two answers: opening said "The
@@ -149,10 +197,190 @@ app bugs, and are not on this list.
   needs a `positionRelativeToPoi` (or similar) field added to the context injection in
   `guide.js`, computed client-side from current aircraft position vs. POI position.
 
+- [ ] **Premium POI auto-fire geofence failure (Hells Canyon)** — during dev
+  walkthrough, Hells Canyon's auto-surfacing "Tell me about" card never appeared while
+  approaching; user only reached it by manually clicking the map marker's Leaflet
+  popup after already flying past it. Checked the actual data: `radiusMiles: 100`,
+  `altitudeWindowFt: [28000, 38000]`, aircraft was at 37,000 ft — well within both
+  constraints, so on paper this should have auto-fired. This is DISTINCT from the
+  fall-out item above (that's about queue pruning after conversations; this is about
+  the geofence never triggering in the first place despite being in range). Root
+  cause not yet investigated — candidates to check: `seatSide: "A"` / heading match
+  logic in `update()`, update-tick timing missing the in-range window, or something in
+  `_surface()`'s tier logic silently blocking it. Needs investigation before a fix.
+
+- [ ] **Turbulence zone names are meaningless to passengers — AND direction-wrong
+  once reversed.** Found during dev walkthrough of the turbulence dedup fix. Zone
+  labels like "SW Wyoming to Wyoming basin" and "Rawlins area" are aviation/route-point
+  shorthand with no context a passenger would recognize. Per user: "the flyer probably
+  has no idea where the 'Rawlins area' actually is, unless they are from there."
+  **Escalated during the heading-fix walkthrough (2026-07-13):** the point-name map in
+  `buildTurbulenceSummary()` is a fixed lookup keyed by coordinate, written assuming
+  eastbound framing — "Denver approach" literally means "arriving into Denver." On the
+  westbound (DEN→SEA) DEPARTING flight, that exact same coordinate is now the very
+  FIRST zone shown, on a flight that's departing FROM Denver, not approaching it. Per
+  user: "the thing that threw me off was 'Denver Approach' on a departing flight."
+  This isn't just unclear naming (the original finding) — some names are now actively
+  self-contradictory once direction reverses. Needs a naming pass using recognizable,
+  DIRECTION-NEUTRAL reference points or relative framing (e.g. "over southern
+  Wyoming," "near Fort Collins") instead of directional/phase-of-flight names like
+  "approach" that only make sense for one specific direction.
+
+## UNRESOLVED — Wikipedia POI firing distance/timing (2026-07-13, needs real investigation)
+
+- [ ] **I.O.O.F. Building (Idaho Falls) fired while still well ahead of aircraft on
+  approach — NOT after passing.** Important correction: the agent initially
+  misread the map and claimed this fired "after passing" the location, based on an
+  eastbound reading of a westbound (DEN→SEA) map — the exact class of directional
+  mistake being fixed all session. User corrected this directly: "it's NOT FRIGGIN
+  PAST IT - it's a westbound flight... it hasnt arrived yet." This means the actual
+  bug is PREMATURE firing on approach, not late/stale firing after passing — a
+  different failure mode than the South Superior Union Hall / fall-out theory above.
+  150mi radius at 37,000ft (per `visibleRadiusMiles`) may simply be too generous for
+  Wikipedia POIs specifically, or there may be a real distance-calculation bug. NOT
+  diagnosed with real numbers — needs proper instrumented investigation, not more
+  live guessing against screenshots (this exact approach cost real credits tonight
+  without producing an answer).
+
+- [ ] **Lander Peak fired while far from aircraft; Table Rock did not fire while
+  directly adjacent to aircraft.** User's concern, verbatim: "Table rock is right next
+  to the aircraft - lander peak is a Long distance from the aircraft position - why
+  would it fire and the close table rock NOT." Both are real Wyoming locations
+  (verified via web search — not fabrications like Shadow Array). Working theory,
+  NOT verified with real data: `poiEngine.js`'s `update()` only surfaces ONE random
+  Wikipedia POI per tick when multiple are in range (`wikiInRange[Math.floor(Math.random()...)]`),
+  and once a POI enters `this.triggered` it can never fire again regardless of later
+  distance — so if Lander Peak won an earlier random draw while both were briefly in
+  range together, or fired at a different time than Table Rock's close pass, that
+  could explain the order without either being a "wrong location" bug. **This was NOT
+  confirmed with real coordinate/timing data — a debug logging attempt was made and
+  removed without getting real numbers, at direct cost to the user's credits.** Needs
+  a proper, minimal, ONE-TIME investigation next session — get real distance/radius
+  values for both POIs at the actual moments they were candidates, not repeated
+  screenshot-based guessing.
+
+## Running list — additional items found during heading-fix testing (not prioritized yet)
+
+- [ ] **`FlightEntry.jsx` seat-side hint text doesn't reflect known flight direction.**
+  When a known flight number (e.g. DL3676, a westbound flight) is typed into the input,
+  the seat-side hint below the Left/Right toggle still says "Right side — south-facing
+  on eastbound flights" / "Left side — north-facing on eastbound flights" regardless
+  of which flight was entered. Since `KNOWN_ROUTES` already maps flight number →
+  origin/destination at this exact point in the flow, the hint text should flip based
+  on the entered flight's actual direction — e.g. for DL3676, right side should say
+  "north-facing" (per user: "right side, when going east to west, should be
+  north-facing — and we know the direction" [at entry time, since it's a known route]).
+  Not yet prioritized/fixed — added to running list per user's explicit "no need to
+  prioritize now, keep a running list" instruction.
+
+## v2 — Map Provider
+
+- [ ] **Move off free CARTO tiles** — current setup (CARTO `dark_all` free tier)
+  requires visible attribution per ToS (shrunk via CSS + `prefix={false}` on
+  2026-07-13, confirmed working, but attribution itself can't be removed on the free
+  tier). User's call: at v2, evaluate a better map provider and/or a paid tier that
+  doesn't require visible attribution. Not urgent — current shrunk attribution is an
+  acceptable interim state.
+
+## MOST CRITICAL — Guide fabricated entire false history for a real place (2026-07-13)
+
+Found during DL3676 dev walkthrough, testing the heading fix. Worse than any other
+finding tonight — this is not a tone/phrasing bug, it's the guide inventing detailed
+false historical claims and presenting them as confident fact.
+
+- [ ] **Guide fabricated a fake mining-town history for "Shadow Array" (a real,
+  well-documented modern art installation).** User clicked a Wikipedia POI titled
+  "Shadow Array" near Denver. Guide response: "There's a town buried under Denver's
+  southwestern suburbs called Shadow Array — a mining settlement that vanished so
+  completely most locals have no idea it existed. Built around silver in the 1870s,
+  it collapsed within a decade when the market crashed. The land just swallowed it."
+  **VERIFIED VIA WEB SEARCH: this is entirely fabricated.** "Shadow Array" is a real,
+  extensively documented $2M public art sculpture at Denver International Airport —
+  236 beetle-killed spruce logs, created by artist Patrick Marold, completed
+  ~2015-2016, commissioned by City of Denver + Colorado State Forest Service. Nothing
+  in the guide's response is true: no mining town, no silver, no 1870s settlement, no
+  collapse. The guide invented specific fake dates, a fake cause of destruction, and
+  fake geographic framing, and presented all of it with full narrative confidence —
+  no hedging, no "I'm not certain," nothing distinguishing it from a verified fact.
+  **Root cause: this directly violates the SOURCE OF KNOWLEDGE rule already in
+  `guide.js`** — "If the POI is obscure or you genuinely know nothing about it, pivot
+  to the broader geography, geology, or history of the region instead." The model
+  did not pivot; it fabricated. An unusual/ambiguous title like "Shadow Array" should
+  have been treated as a signal for uncertainty, not license to invent a story that
+  fits the "abandoned settlement" pattern the guide clearly favors for obscure-sounding
+  names. **This is more severe than the visual-language bug** — a passenger has no way
+  to distinguish a real historical fact from a fully fabricated one, and confident
+  fabrication actively damages trust in every OTHER thing the guide says, including
+  responses that ARE accurate. Needs a real fix, likely: (1) much stronger prompt
+  language on obscure/ambiguous titles forcing genuine epistemic uncertainty rather
+  than pattern-matched invention, (2) possibly reconsider whether Wikipedia POIs with
+  non-obviously-geographic/historical titles (art installations, infrastructure,
+  organizations) should be filtered out of `filterPOIs()` before ever reaching the
+  guide, since "Shadow Array" doesn't read as a place name at all and arguably
+  shouldn't have been surfaced as a "tell me about this place" POI to begin with.
+
+## CRITICAL — Found via real passenger use (wife's actual SEA↔DEN round trip, 2026-07-13)
+
+Found by an actual passenger using the app on a real flight, not synthetic dev testing.
+Higher priority than the walkthrough items above — this is real-world usage feedback.
+
+- [ ] **Heading is hardcoded to 'eastbound' — return flight (westbound) is broken.**
+  CONFIRMED via code read: `FlightView.jsx` hardcodes `'eastbound'` in THREE places —
+  the curated waypoint filter (`wp.heading === 'eastbound'`), the
+  `engineRef.current.update()` call, and `ConversationPanel`'s position context. The
+  header also hardcodes the text `"SEA → DEN"` regardless of which flight was actually
+  selected. Direct real-world impact: on the DEN→SEA return flight, the app still
+  filtered for eastbound-tagged POIs and told the guide the aircraft was heading
+  eastbound — completely wrong for the actual direction of travel. **This is the SAME
+  ROOT CAUSE as bug #3 below (premium POIs didn't fire on the return flight)** — POIs
+  tagged `heading: "eastbound"` never pass the filter when the code is hardcoded to
+  eastbound but the plane is flying west, OR when actually westbound, they'd need
+  `heading: "westbound"` tagged content that may not even exist yet (see Backlog —
+  "DEN-SEA route content" was already flagged as an unbuilt westbound seed set, but
+  this shows the CODE itself doesn't even detect return-direction correctly,
+  independent of whether westbound content exists). Fix needs to: (1) derive actual
+  heading from `flightNumber` (DL3675 = eastbound SEA→DEN, DL3676 = westbound
+  DEN→SEA — this distinction already exists elsewhere, e.g. `flyrepService.js`'s
+  `deriveCorridorHash`) or from actual position delta over time, (2) use that
+  derived value everywhere `'eastbound'` is currently hardcoded, (3) fix the header
+  text to reflect actual route/direction.
+
+- [ ] **Premium POIs didn't fire on return flight** — CONFIRMED same root cause as the
+  heading bug above, not a separate issue. Once heading is correctly derived, verify
+  this resolves on its own (assuming westbound-tagged premium content exists — if not,
+  this exposes the "DEN-SEA route content" backlog gap as a real, user-facing failure,
+  not just a nice-to-have).
+
+- [ ] **Generate POIs for multiple flight scenarios, not just SEA→DEN eastbound.**
+  User's proposal: run a handful of concrete flight scenarios (at minimum: DEN→SEA
+  westbound return, since the heading bug above just proved this direction is
+  completely broken/untested) and use each one to systematically generate/identify
+  what POI content is missing for that direction — rather than only ever testing the
+  one direction that happens to work. Ties directly into two existing backlog items:
+  "DEN-SEA route content (westbound seed set)" (already flagged, now confirmed
+  urgent by real usage) and the "dead-zone POI gap detection" item above. Scope this
+  once the heading bug itself is fixed — no point generating westbound POI coverage
+  analysis while the code still can't correctly detect westbound flights.
+
+- [ ] **Flight plan re-routing not reflected — SWIM data not actually integrated.**
+  Real-world finding: the actual flight's route was updated shortly after departure
+  (a real reroute), but the app kept showing/using the original filed route, and POIs
+  didn't track against the actual path flown. CONFIRMED via code read: zero SWIM
+  integration exists anywhere in the codebase — this is NOT a bug in existing code,
+  it's the entire unbuilt "SWIM Integration" / "Dynamic Route Model" project already
+  scoped in Phase 2/3 of this roadmap (standalone Solace consumer service, XML/FIXM
+  parsing, persistent connection architecture outside Netlify Functions' stateless
+  model). Subscriptions are live (TFMS R14 Flight/Flow Data) but nothing consumes
+  them yet. This is real infrastructure work, not a quick patch — re-confirms this
+  should stay a planned Phase 2/3 project, but now has a concrete real-world case
+  proving the need rather than a theoretical one.
+
 ## Confirmed working (2026-07-13 manual testing)
 
 - ✅ Live ADS-B tracking (OpenSky) — user independently verified DAL2543's live
   position against an external source, confirmed accurate.
+- ✅ CARTO attribution shrink (CSS + `prefix={false}`) — confirmed visually smaller
+  after hard refresh.
 
 ## Next Session — Test Infrastructure (do this before more fixes)
 

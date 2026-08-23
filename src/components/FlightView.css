@@ -68,6 +68,20 @@
   background: #0a0e1a;
 }
 
+/* Shrink map tile attribution — CARTO's ToS requires the credit stay
+   visible, but it doesn't need to be full-size. Revisit once we move to
+   a tile provider that doesn't require visible attribution. */
+.fv-map .leaflet-control-attribution {
+  font-size: 0.6rem;
+  padding: 1px 4px;
+  background: rgba(10, 14, 26, 0.7);
+  color: #6b7a99;
+}
+
+.fv-map .leaflet-control-attribution a {
+  color: #6b7a99;
+}
+
 /* Leaflet popup override */
 .wp-popup .leaflet-popup-content-wrapper {
   background: #111827;

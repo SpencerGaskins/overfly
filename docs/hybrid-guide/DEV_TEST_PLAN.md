@@ -139,6 +139,41 @@ injection.
 
 ---
 
+## Fix: Heading hardcode (DL3676 westbound direction bug) — 2026-07-13
+
+**Change:** Fixed hardcoded `'eastbound'`/`'SEA-DEN'`/`ROUTE_SEA_DEN` assumptions across
+`FlightView.jsx` (7 locations), `FlightBriefing.jsx` (7 locations), and `poiEngine.js`
+(2 locations, including a stale-index bug in `checkTurbulenceAhead` affecting DR/live
+tracking regardless of direction). Full audit documented in ROADMAP.md.
+
+**Agent-verifiable:**
+- [x] Build passes clean
+- [x] Waypoint merge confirmed via direct data check (westbound waypoints reachable)
+
+**User-verifiable (DL3676 DEN→SEA) — Briefing screen fully confirmed 2026-07-13:**
+- [x] Header shows "DL3676" / "DEN → SEA" — confirmed
+- [x] Seat-side text reflects westbound (Rockies climbout / Wyoming basin) — confirmed
+- [x] Turbulence outlook in Denver→Seattle order, not duplicated counts — confirmed
+- [x] "What to Look For" shows Bonneville Dam + Mt. St. Helens Crater — confirmed
+- [x] User confirmation: "The only flagged 'bug' is the previously mentioned 'denver
+  approach'" naming issue (already tracked separately, not a heading-fix regression)
+
+**User-verifiable (FlightView / map screen) — still to test:**
+- [ ] Aircraft icon points west/left during simulation
+- [ ] Route polyline traces DEN→SEA correctly
+- [ ] Premium POIs actually fire in range during Auto/Step simulation
+- [ ] Turbulence alert distance reflects actual current position (not stale index) —
+  specifically test under Auto simulation and dead reckoning, not just manual Step
+- [ ] Long conversation → close → no stale POI card appears
+- [ ] DL3675 (original eastbound direction) still works correctly — regression check,
+  most important remaining item since it confirms nothing broke in the process of
+  fixing the westbound direction
+
+**Known remaining issues (logged separately, not part of this fix):**
+- "Denver approach" zone naming — direction-wrong label, tracked in ROADMAP.md
+- "Shadow Array" Wikipedia POI fabrication — guide invented false history for a real
+  art installation
+
 ## Confirmed working — no further action needed
 
 - [x] Live ADS-B tracking (OpenSky) — user independently verified DAL2543's live

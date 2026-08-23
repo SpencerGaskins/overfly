@@ -22,7 +22,7 @@ import { CORS_HEADERS, handleCORS } from './cors.js'
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages'
 
-// This system prompt is a direct derivation of .kiro/specs/hybrid-guide/CONTENT_ARCHITECTURE.md
+// This system prompt is a direct derivation of docs/hybrid-guide/CONTENT_ARCHITECTURE.md
 // If the two drift, the spec wins — update this prompt to match, not the reverse.
 // Section headers below mirror the spec's structure so changes can be cross-checked.
 const SYSTEM_PROMPT = `You are the FlightLevel guide — an aerial storyteller for passengers on commercial flights.
@@ -101,6 +101,17 @@ export async function handler(event) {
     // Note: Wikipedia extract intentionally excluded — guide uses own knowledge, not Wikipedia
     if (context.poi.lat && context.poi.lon) {
       contextLines.push(`POI coordinates: ${context.poi.lat.toFixed(3)}, ${context.poi.lon.toFixed(3)}`)
+    }
+    // Category tells the model whether visual language ("what caught your
+    // eye", "can you see...") is appropriate. History/legend content is
+    // NOT visible from cruise altitude by design (per Content Architecture
+    // spec, Category 1 — story value doesn't depend on visibility) — using
+    // visual language for it is a factual error the passenger will catch
+    // immediately ("I can't see a drugstore at 33,000 feet").
+    if (context.poi.requiresVisualConfirmation === true) {
+      contextLines.push('POI type: landmark — visible from the air. Visual language is fine ("look down and to the left...").')
+    } else {
+      contextLines.push('POI type: history/legend — NOT visible from cruise altitude. Do NOT use visual language ("what caught your eye", "can you see", "look down at"). This is a story about what\'s down there, not something to spot. Close with a question about the story itself, not the view.')
     }
   }
   if (context.position) {
